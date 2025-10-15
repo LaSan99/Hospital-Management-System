@@ -79,7 +79,20 @@ const Doctors = () => {
     }
   )
 
-  // Toggle doctor status mutation
+  // Toggle doctor availability mutation
+  const toggleAvailabilityMutation = useMutation(
+    ({ doctorId, isAvailable }) => doctorsAPI.updateAvailability(doctorId, isAvailable),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('doctors')
+      },
+      onError: (error) => {
+        console.error('Error toggling doctor availability:', error)
+      }
+    }
+  )
+
+  // Toggle doctor account status mutation (admin only)
   const toggleStatusMutation = useMutation(
     ({ doctorId, isActive }) => doctorsAPI.update(doctorId, { isActive }),
     {
@@ -92,8 +105,14 @@ const Doctors = () => {
     }
   )
 
+  const handleToggleAvailability = (doctorId, currentAvailability) => {
+    if (window.confirm(`Are you sure you want to mark this doctor as ${currentAvailability ? 'unavailable' : 'available'}?`)) {
+      toggleAvailabilityMutation.mutate({ doctorId, isAvailable: !currentAvailability })
+    }
+  }
+
   const handleToggleStatus = (doctorId, currentStatus) => {
-    if (window.confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this doctor?`)) {
+    if (window.confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this doctor's account?`)) {
       toggleStatusMutation.mutate({ doctorId, isActive: !currentStatus })
     }
   }
@@ -276,7 +295,8 @@ const Doctors = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Availability</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -314,11 +334,20 @@ const Doctors = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        doctor.isActive 
+                        doctor.isAvailable 
                           ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {doctor.isAvailable ? 'Available' : 'Unavailable'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        doctor.isActive 
+                          ? 'bg-blue-100 text-blue-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {doctor.isActive ? 'Active' : 'Inactive'}
+                        {doctor.isActive ? 'Active' : 'Deactivated'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -328,11 +357,22 @@ const Doctors = () => {
                           <>
                             <button className="text-indigo-600 hover:text-indigo-900">Edit</button>
                             <button 
+                              onClick={() => handleToggleAvailability(doctor._id, doctor.isAvailable)}
+                              className={`${
+                                doctor.isAvailable 
+                                  ? 'text-yellow-600 hover:text-yellow-900' 
+                                  : 'text-green-600 hover:text-green-900'
+                              }`}
+                              disabled={toggleAvailabilityMutation.isLoading}
+                            >
+                              {doctor.isAvailable ? 'Set Unavailable' : 'Set Available'}
+                            </button>
+                            <button 
                               onClick={() => handleToggleStatus(doctor._id, doctor.isActive)}
                               className={`${
                                 doctor.isActive 
                                   ? 'text-red-600 hover:text-red-900' 
-                                  : 'text-green-600 hover:text-green-900'
+                                  : 'text-blue-600 hover:text-blue-900'
                               }`}
                               disabled={toggleStatusMutation.isLoading}
                             >

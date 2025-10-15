@@ -64,6 +64,10 @@ const userSchema = new mongoose.Schema({
   licenseNumber: String,
   experience: Number,
   consultationFee: Number,
+  isAvailable: {
+    type: Boolean,
+    default: true
+  },
   
   // Patient Information (only for patients)
   bloodType: String,

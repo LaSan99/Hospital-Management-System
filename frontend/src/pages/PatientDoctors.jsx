@@ -212,13 +212,19 @@ const PatientDoctors = () => {
                     </span>
                   </div>
                 </div>
-                <button 
-                  className="btn btn-primary btn-sm"
-                  onClick={() => handleBookAppointment(doctor)}
-                >
-                  <BookOpen className="h-4 w-4 mr-1" />
-                  Book Appointment
-                </button>
+                {doctor.isAvailable !== false ? (
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleBookAppointment(doctor)}
+                  >
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    Book Appointment
+                  </button>
+                ) : (
+                  <span className="text-sm text-yellow-600 font-medium">
+                    Unavailable
+                  </span>
+                )}
               </div>
             </div>
           ))}
