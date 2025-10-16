@@ -74,10 +74,10 @@ const appointmentSchema = new mongoose.Schema({
   // Payment
   consultationFee: Number,
   paymentStatus: {
-    type: String,
-    enum: ['pending', 'paid', 'free'],
-    default: 'pending'
+    type: Boolean,
+    default: false
   },
+  paidAt: Date,
   
   // Notes
   notes: String

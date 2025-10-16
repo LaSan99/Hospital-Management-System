@@ -147,13 +147,21 @@ router.post('/', authenticateToken, authorize('admin', 'staff', 'doctor'), async
       }
     });
   } catch (error) {
-    console.error('Create medical record error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create medical record',
-      error: error.message
-    });
+  console.error('Create medical record error:', error); // 👈 This logs full error
+
+  // Also log validation errors specifically
+  if (error.name === 'ValidationError') {
+    console.error('Validation errors:', error.errors);
   }
+
+  res.status(500).json({
+    success: false,
+    message: 'Failed to create medical record',
+    error: error.message,
+    // Optional: send errors in dev (remove in production)
+    // details: error.errors 
+  });
+}
 });
 
 // Update medical record

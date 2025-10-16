@@ -1,7 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery } from 'react-query'
 import { useAuth } from '../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
 import { 
   Calendar, 
   UserCheck, 
@@ -17,17 +16,69 @@ import {
   Activity,
   Shield,
   Star,
+  ChevronRight,
+  ChevronLeft,
   Plus,
+  Download,
+  Share2,
+  ArrowRight,
+  Play,
+  Award,
   Users,
-  HeartPulse,
-  LineChart,
-  ShieldCheck
+  TrendingUp,
+  ShieldCheck,
+  Eye,
+  Edit,
+  MoreVertical,
+  Bell,
+  Search,
+  Filter,
+  BarChart3,
+  Stethoscope,
+  Pill,
+  Microscope
 } from 'lucide-react'
 import { appointmentsAPI, doctorsAPI, healthCardsAPI } from '../services/api'
 
 const PatientHome = () => {
   const { user } = useAuth()
-  const navigate = useNavigate()
+  const [currentSlide, setCurrentSlide] = useState(0)
+
+  // Image slides data
+  const slides = [
+    {
+      id: 1,
+      image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2050&q=80",
+      title: "World-Class Healthcare",
+      subtitle: "Experience excellence in medical care with our state-of-the-art facilities",
+      cta: "Book Appointment",
+      badge: "24/7 Emergency Care"
+    },
+    {
+      id: 2,
+      image: "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2032&q=80",
+      title: "Advanced Technology",
+      subtitle: "Cutting-edge medical technology for accurate diagnosis and treatment",
+      cta: "Our Services",
+      badge: "AI-Powered Diagnostics"
+    },
+    {
+      id: 3,
+      image: "https://images.unsplash.com/photo-1551076805-e1869033e561?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2032&q=80",
+      title: "Expert Medical Team",
+      subtitle: "Board-certified specialists dedicated to your health and wellbeing",
+      cta: "Meet Our Doctors",
+      badge: "200+ Specialists"
+    }
+  ]
+
+  // Auto slide rotation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [slides.length])
 
   // Fetch patient data
   const { data: appointmentsData } = useQuery(
@@ -42,31 +93,29 @@ const PatientHome = () => {
     { enabled: true }
   )
 
-  const { data: healthCardData, error: healthCardError } = useQuery(
+  const { data: healthCardData } = useQuery(
     'patient-health-card',
     () => healthCardsAPI.getByPatient(user?._id),
     { 
       enabled: !!user?._id,
-      retry: false,
-      onError: (error) => {
-        // Don't show error for 404 - just means no health card exists yet
-        if (error.response?.status !== 404) {
-          console.error('Health card fetch error:', error)
-        }
-      }
+      retry: false
     }
   )
 
-  console.log('Health Card Data:', healthCardData)
-  console.log('Health Card Error:', healthCardError)
-  console.log('User ID:', user?._id)
+  const { data: requestData } = useQuery(
+    'my-health-card-request',
+    () => healthCardsAPI.getMyRequest(),
+    {
+      enabled: !!user,
+      retry: 1
+    }
+  )
 
   const appointments = appointmentsData?.data?.appointments || []
   const doctors = doctorsData?.data?.doctors || []
   const healthCard = healthCardData?.data?.data?.healthCard || 
                      healthCardData?.data?.healthCard
-  
-  console.log('Parsed Health Card:', healthCard)
+  const request = requestData?.data?.data?.request || requestData?.data?.request
 
   // Filter patient's appointments
   const patientAppointments = appointments.filter(apt => 
@@ -91,463 +140,537 @@ const PatientHome = () => {
   const recentAppointments = patientAppointments
     .filter(apt => new Date(apt.appointmentDate) < new Date())
     .sort((a, b) => new Date(b.appointmentDate) - new Date(a.appointmentDate))
-    .slice(0, 5)
+    .slice(0, 3)
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'scheduled':
-        return 'badge-info'
+        return 'bg-blue-50 text-blue-700 border-blue-200'
       case 'confirmed':
-        return 'badge-success'
+        return 'bg-green-50 text-green-700 border-green-200'
       case 'completed':
-        return 'badge-success'
+        return 'bg-gray-50 text-gray-700 border-gray-200'
       case 'cancelled':
-        return 'badge-danger'
+        return 'bg-red-50 text-red-700 border-red-200'
       default:
-        return 'badge-warning'
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200'
     }
   }
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'scheduled':
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-3 w-3" />
       case 'confirmed':
-        return <CheckCircle className="h-4 w-4" />
+        return <CheckCircle className="h-3 w-3" />
       case 'completed':
-        return <CheckCircle className="h-4 w-4" />
+        return <CheckCircle className="h-3 w-3" />
       case 'cancelled':
-        return <AlertCircle className="h-4 w-4" />
+        return <AlertCircle className="h-3 w-3" />
       default:
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-3 w-3" />
     }
   }
 
-  return (
-    <div className="p-6 bg-gray-50">
-      <WelcomeBanner navigate={navigate} />
-      <ActionCards navigate={navigate} />
-      <DashboardCards 
-        todayAppointments={todayAppointments.length}
-        upcomingAppointments={upcomingAppointments.length}
-        doctorsCount={doctors.length}
-        healthCard={healthCard}
-      />
-      <QuickActionsSection navigate={navigate} />
-      <EmergencyContactSection />
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <AppointmentsSection 
-          todayAppointments={todayAppointments}
-          getStatusColor={getStatusColor}
-          navigate={navigate}
-        />
-        <HealthCardSection healthCard={healthCard} navigate={navigate} />
-      </div>
-      <footer className="mt-8 text-center text-gray-500 text-xs py-4">
-        <p>© 2023 MediCare Hospital Management System. All rights reserved.</p>
-      </footer>
-    </div>
-  )
-}
+  // Medical departments data
+  const departments = [
+    { name: 'Cardiology', icon: Heart, color: 'red', doctors: 12 },
+    { name: 'Neurology', icon: Activity, color: 'purple', doctors: 8 },
+    { name: 'Orthopedics', icon: Users, color: 'blue', doctors: 15 },
+    { name: 'Pediatrics', icon: Stethoscope, color: 'green', doctors: 10 }
+  ]
 
-// Component Functions
+  // Health metrics data
+  const healthMetrics = [
+    { name: 'Blood Pressure', value: '120/80', status: 'normal', trend: 'stable' },
+    { name: 'Heart Rate', value: '72 bpm', status: 'normal', trend: 'stable' },
+    { name: 'Blood Sugar', value: '98 mg/dL', status: 'normal', trend: 'improving' },
+    { name: 'Cholesterol', value: '180 mg/dL', status: 'borderline', trend: 'monitoring' }
+  ]
 
-const WelcomeBanner = ({ navigate }) => {
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
-      <div className="flex flex-col md:flex-row">
-        {/* Left content area */}
-        <div className="p-6 md:p-8 flex-1">
-          <div className="flex items-center mb-4">
-            <div className="bg-blue-600 p-2 rounded-lg mr-3">
-              <Activity size={20} className="text-white" />
+    <div className="min-h-screen bg-gray-50">
+      
+
+      {/* Hero Slider */}
+      <div className="relative h-96 lg:h-[500px] overflow-hidden">
+        {slides.map((slide, index) => (
+          <div
+            key={slide.id}
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${slide.image})` }}
+            >
+              <div className="absolute inset-0 bg-black/40"></div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Healthcare Dashboard
-            </h1>
-          </div>
-          <p className="text-gray-600 mb-6 max-w-lg">
-            Monitor your health metrics, manage appointments, and access medical
-            services all in one secure platform.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <HealthMetric
-              icon={<HeartPulse size={18} className="text-rose-500" />}
-              label="Heart Rate"
-              value="72 bpm"
-              status="normal"
-            />
-            <HealthMetric
-              icon={<LineChart size={18} className="text-blue-500" />}
-              label="Blood Pressure"
-              value="120/80"
-              status="normal"
-            />
-            <HealthMetric
-              icon={<ShieldCheck size={18} className="text-green-500" />}
-              label="Health Status"
-              value="Good"
-              status="normal"
-            />
-          </div>
-          <div className="flex space-x-3 mt-2">
-            <button 
-              onClick={() => navigate('/medical-records')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              View Health Report
-            </button>
-            <button 
-              onClick={() => navigate('/profile')}
-              className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              Update Metrics
-            </button>
-          </div>
-        </div>
-        {/* Right visualization area */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 w-full md:w-1/3 p-6 flex items-center justify-center relative">
-          <div className="absolute top-0 right-0 w-full h-full opacity-10">
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              <path
-                d="M0,50 Q25,0 50,50 T100,50"
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth="2"
-              />
-              <path
-                d="M0,60 Q25,10 50,60 T100,60"
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth="2"
-              />
-              <path
-                d="M0,70 Q25,20 50,70 T100,70"
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth="2"
-              />
-            </svg>
-          </div>
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="w-32 h-32 rounded-full bg-white shadow-lg flex items-center justify-center mb-4">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center animate-pulse">
-                <HeartPulse size={40} className="text-white" />
+            
+            <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+              <div className="text-white max-w-2xl">
+                <span className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-sm font-medium mb-6">
+                  {slide.badge}
+                </span>
+                <h1 className="text-4xl lg:text-6xl font-bold mb-4 leading-tight">
+                  {slide.title}
+                </h1>
+                <p className="text-xl lg:text-2xl mb-8 text-gray-200 leading-relaxed">
+                  {slide.subtitle}
+                </p>
+                <div className="flex space-x-4">
+                  <button className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center">
+                    {slide.cta}
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </button>
+                  <button className="border border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/10 transition-colors flex items-center">
+                    <Play className="h-5 w-5 mr-2" />
+                    Watch Video
+                  </button>
+                </div>
               </div>
             </div>
-            <p className="text-blue-800 font-medium text-center">
-              Your health metrics are within normal range
-            </p>
           </div>
+        ))}
+        
+        {/* Slider Controls */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all ${
+                index === currentSlide ? 'bg-white scale-125' : 'bg-white/50'
+              }`}
+            />
+          ))}
         </div>
-      </div>
-    </div>
-  )
-}
 
-const HealthMetric = ({ icon, label, value, status }) => {
-  const statusColors = {
-    normal: 'text-green-600',
-    warning: 'text-amber-600',
-    alert: 'text-red-600',
-  }
-  return (
-    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-      <div className="flex items-center mb-1">
-        {icon}
-        <span className="text-xs text-gray-500 ml-1.5">{label}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-lg font-semibold text-gray-800">{value}</span>
-        <span className={`text-xs font-medium ${statusColors[status]}`}>
-          {status === 'normal'
-            ? 'Normal'
-            : status === 'warning'
-              ? 'Warning'
-              : 'Alert'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-const ActionCards = ({ navigate }) => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      <ActionCard
-        message="You're all set! Enjoy your day."
-        buttonText="Book Appointment"
-        buttonIcon={<Calendar size={16} />}
-        bgColor="bg-blue-50"
-        onClick={() => navigate('/book-appointment')}
-      />
-      <ActionCard
-        message="Contact the hospital to issue your digital health card."
-        buttonText="Request Health Card"
-        buttonIcon={<CreditCard size={16} />}
-        bgColor="bg-green-50"
-        onClick={() => navigate('/health-cards')}
-      />
-    </div>
-  )
-}
-
-const ActionCard = ({ message, buttonText, buttonIcon, bgColor, onClick }) => {
-  return (
-    <div className={`${bgColor} rounded-xl p-6 shadow-sm`}>
-      <p className="text-gray-700 mb-4">{message}</p>
-      <div className="flex justify-center">
-        <button 
-          onClick={onClick}
-          className="flex items-center bg-white border border-gray-200 text-gray-800 rounded-lg py-2 px-4 text-sm font-medium shadow-sm hover:bg-gray-50 transition-colors"
+        {/* Navigation Arrows */}
+        <button
+          onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors"
         >
-          <span className="mr-2">{buttonIcon}</span>
-          {buttonText}
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+        <button
+          onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors"
+        >
+          <ChevronRight className="h-6 w-6" />
         </button>
       </div>
-    </div>
-  )
-}
 
-const DashboardCards = ({ todayAppointments, upcomingAppointments, doctorsCount, healthCard }) => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-      <StatCard
-        icon={<Calendar size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-blue-400 to-blue-600"
-        label="Today's Appointments"
-        value={todayAppointments.toString()}
-        subLabel="Scheduled"
-        accentColor="border-blue-500"
-      />
-      <StatCard
-        icon={<Clock size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-green-400 to-green-600"
-        label="Upcoming Appointments"
-        value={upcomingAppointments.toString()}
-        subLabel="Next 7 days"
-        accentColor="border-green-500"
-      />
-      <StatCard
-        icon={<UserCheck size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-purple-400 to-purple-600"
-        label="Available Doctors"
-        value={doctorsCount.toString()}
-        subLabel="Specialists"
-        accentColor="border-purple-500"
-      />
-      <StatCard
-        icon={<Shield size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-orange-400 to-orange-600"
-        label="Health Card"
-        value={healthCard ? 'Active' : 'Not Issued'}
-        subLabel={healthCard ? 'Valid' : 'Pending'}
-        valueClass="text-base"
-        accentColor="border-orange-500"
-      />
-    </div>
-  )
-}
-
-const StatCard = ({ icon, iconBg, label, value, subLabel, valueClass = 'text-3xl', accentColor }) => {
-  return (
-    <div
-      className={`bg-white rounded-xl p-5 shadow-md border-l-4 ${accentColor} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-gray-600 text-sm font-medium">{label}</p>
-          <p className={`font-bold ${valueClass} mt-1 text-gray-800`}>
-            {value}
-          </p>
-          <p className="text-gray-400 text-xs mt-1">{subLabel}</p>
-        </div>
-        <div
-          className={`${iconBg} w-12 h-12 rounded-lg flex items-center justify-center shadow-md`}
-        >
-          {icon}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const AppointmentsSection = ({ todayAppointments, getStatusColor, navigate }) => {
-  return (
-    <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100 h-80 hover:shadow-lg transition-all duration-300">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <div className="bg-blue-100 p-2 rounded-lg mr-3">
-            <Calendar className="text-blue-600" size={20} />
-          </div>
-          <div>
-            <h2 className="font-semibold text-lg text-gray-800">
-              Today's Appointments
-            </h2>
-            <p className="text-xs text-gray-500">
-              Your scheduled appointments for today
-            </p>
+      {/* Hospital Stats */}
+      <div className="bg-white py-16 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">200+</div>
+              <div className="text-gray-600">Expert Doctors</div>
+            </div>
+            <div className="text-center">
+              <div className="bg-green-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">50K+</div>
+              <div className="text-gray-600">Patients Treated</div>
+            </div>
+            <div className="text-center">
+              <div className="bg-purple-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Award className="h-8 w-8 text-purple-600" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">25+</div>
+              <div className="text-gray-600">Years Experience</div>
+            </div>
+            <div className="text-center">
+              <div className="bg-orange-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldCheck className="h-8 w-8 text-orange-600" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">99%</div>
+              <div className="text-gray-600">Success Rate</div>
+            </div>
           </div>
         </div>
-        <span className="text-sm bg-blue-50 text-blue-700 py-1 px-3 rounded-full font-medium">
-          {todayAppointments.length} scheduled
-        </span>
       </div>
-      <div className="flex flex-col items-center justify-center h-48 bg-blue-50/50 rounded-lg">
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mb-4 shadow-md">
-          <Calendar className="text-white" size={32} />
-        </div>
-        <p className="font-medium text-gray-800 mb-1">No appointments today</p>
-        <p className="text-gray-500 text-sm mb-4 text-center max-w-xs">
-          You're all set! Enjoy your day or schedule a new appointment.
-        </p>
-        <button 
-          onClick={() => navigate('/book-appointment')}
-          className="flex items-center bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm hover:bg-blue-700 transition-colors shadow-md"
-        >
-          <Plus size={16} className="mr-2" />
-          Book Appointment
-        </button>
-      </div>
-    </div>
-  )
-}
 
-const HealthCardSection = ({ healthCard, navigate }) => {
-  return (
-    <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100 h-80 hover:shadow-lg transition-all duration-300">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <div className="bg-green-100 p-2 rounded-lg mr-3">
-            <CreditCard className="text-green-600" size={20} />
+      {/* Main Dashboard Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome and Quick Stats */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome back, <span className="text-blue-600">Dr. {user?.firstName}!</span>
+              </h1>
+              <p className="text-gray-600">
+                Here's your medical dashboard overview for today
+              </p>
+            </div>
+            <div className="flex items-center space-x-3 mt-4 lg:mt-0">
+              <div className="relative">
+                <Search className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search records..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <Filter className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold text-lg text-gray-800">
-              Digital Health Card
-            </h2>
-            <p className="text-xs text-gray-500">
-              Your electronic health identification
-            </p>
-          </div>
-        </div>
-        <span className="text-sm bg-orange-50 text-orange-700 py-1 px-3 rounded-full font-medium">
-          {healthCard ? 'Active' : 'Not issued'}
-        </span>
-      </div>
-      <div className="flex flex-col items-center justify-center h-48 bg-green-50/50 rounded-lg">
-        <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-4 shadow-md">
-          <CreditCard className="text-white" size={32} />
-        </div>
-        <p className="font-medium text-gray-800 mb-1">No Health Card</p>
-        <p className="text-gray-500 text-sm mb-4 text-center max-w-xs">
-          Get quick access to medical services with your digital health card.
-        </p>
-        <button 
-          onClick={() => navigate('/health-cards')}
-          className="flex items-center bg-green-600 text-white rounded-lg px-4 py-2.5 text-sm hover:bg-green-700 transition-colors shadow-md"
-        >
-          <Plus size={16} className="mr-2" />
-          Request Health Card
-        </button>
-      </div>
-    </div>
-  )
-}
 
-const QuickActionsSection = ({ navigate }) => {
-  return (
-    <div className="mt-8">
-      <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Quick Actions</h2>
-        <p className="text-gray-500 text-sm">
-          Access your most important features
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <QuickActionCard
-          icon={<Calendar size={24} className="text-white" />}
-          title="Book Appointment"
-          description="Schedule with a doctor"
-          bgColor="bg-blue-500"
-          onClick={() => navigate('/book-appointment')}
-        />
-        <QuickActionCard
-          icon={<Users size={24} className="text-white" />}
-          title="Find Doctors"
-          description="Browse specialists"
-          bgColor="bg-green-500"
-          onClick={() => navigate('/doctors')}
-        />
-        <QuickActionCard
-          icon={<FileText size={24} className="text-white" />}
-          title="Medical Records"
-          description="View your records"
-          bgColor="bg-purple-500"
-          onClick={() => navigate('/medical-records')}
-        />
-        <QuickActionCard
-          icon={<Phone size={24} className="text-white" />}
-          title="Emergency"
-          description="Contact hospital"
-          bgColor="bg-orange-500"
-          onClick={() => window.open('tel:+1-800-HELP', '_self')}
-        />
-      </div>
-    </div>
-  )
-}
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Today's Appointments</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{todayAppointments.length}</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <Calendar className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm text-green-600">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                <span>On schedule</span>
+              </div>
+            </div>
 
-const QuickActionCard = ({ icon, title, description, bgColor, onClick }) => {
-  return (
-    <div 
-      onClick={onClick}
-      className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center text-center cursor-pointer"
-    >
-      <div
-        className={`${bgColor} w-14 h-14 rounded-lg flex items-center justify-center mb-4`}
-      >
-        {icon}
-      </div>
-      <h3 className="font-medium text-gray-800 mb-1">{title}</h3>
-      <p className="text-gray-500 text-sm">{description}</p>
-    </div>
-  )
-}
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Upcoming This Week</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{upcomingAppointments.length}</p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <Clock className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-gray-500">
+                Next 7 days
+              </div>
+            </div>
 
-const EmergencyContactSection = () => {
-  return (
-    <div className="bg-red-50 rounded-xl p-6 shadow-sm mt-8 border border-red-100">
-      <div className="flex items-start mb-4">
-        <div className="bg-red-500 p-3 rounded-xl mr-4">
-          <AlertCircle size={24} className="text-white" />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-red-700">Emergency Contact</h3>
-          <p className="text-red-600">
-            In case of medical emergency, please contact the hospital
-            immediately.
-          </p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div className="bg-white p-4 rounded-lg flex items-center">
-          <div className="bg-red-100 p-2 rounded-full mr-3">
-            <Phone size={20} className="text-red-600" />
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Available Doctors</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{doctors.length}</p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <UserCheck className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-gray-500">
+                Specialists online
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Health Card</p>
+                  <p className="text-xl font-bold text-gray-900 mt-1">
+                    {healthCard ? 'Active' : 'Not Issued'}
+                  </p>
+                </div>
+                <div className="p-3 bg-orange-50 rounded-lg">
+                  <Shield className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-gray-500">
+                {healthCard ? 'Valid' : 'Contact admin'}
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-700">
-              Emergency Hotline
-            </p>
-            <p className="text-red-600 font-bold">+1-800-HELP</p>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Left Column - Appointments & Health Metrics */}
+          <div className="xl:col-span-2 space-y-8">
+            {/* Today's Appointments */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">Today's Appointments</h2>
+                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    View All
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                {todayAppointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {todayAppointments.map((appointment) => (
+                      <div key={appointment._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                            <UserCheck className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Dr. {appointment.doctorName}</h3>
+                            <p className="text-sm text-gray-600">
+                              {appointment.startTime} - {appointment.endTime}
+                            </p>
+                            <p className="text-sm text-gray-500">{appointment.appointmentType}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
+                            {getStatusIcon(appointment.status)}
+                            <span className="ml-1 capitalize">{appointment.status}</span>
+                          </span>
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments today</h3>
+                    <p className="text-gray-500 mb-4">You're all caught up!</p>
+                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+                      Book Appointment
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Health Metrics */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Health Metrics</h2>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {healthMetrics.map((metric, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600">{metric.name}</span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          metric.status === 'normal' ? 'bg-green-100 text-green-800' :
+                          metric.status === 'borderline' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {metric.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold text-gray-900">{metric.value}</span>
+                        <div className={`flex items-center text-sm ${
+                          metric.trend === 'improving' ? 'text-green-600' :
+                          metric.trend === 'stable' ? 'text-blue-600' :
+                          'text-yellow-600'
+                        }`}>
+                          <TrendingUp className="h-4 w-4 mr-1" />
+                          {metric.trend}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Health Card & Quick Actions */}
+          <div className="space-y-8">
+            {/* Health Card Status */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Health Card</h2>
+              </div>
+              <div className="p-6">
+                {healthCard ? (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-5 text-white">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-blue-100 text-sm">Card Number</p>
+                          <p className="text-xl font-mono font-bold">{healthCard.cardNumber}</p>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          healthCard.status === 'active' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                        }`}>
+                          {healthCard.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <div>
+                          <p className="text-blue-100">Blood Type</p>
+                          <p className="font-semibold">{healthCard.bloodType || 'Not specified'}</p>
+                        </div>
+                        <div>
+                          <p className="text-blue-100">Expires</p>
+                          <p className="font-semibold">
+                            {new Date(healthCard.expiryDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 flex items-center justify-center">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </button>
+                      <button className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 flex items-center justify-center">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Card</h3>
+                    {request ? (
+                      <div>
+                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mb-3 ${
+                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                          {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {request.status === 'rejected' && <AlertCircle className="h-3 w-3 mr-1" />}
+                          Request {request.status}
+                        </div>
+                        <p className="text-gray-500 mb-4 text-sm">
+                          {request.status === 'pending' && 'Your request is being reviewed by admin.'}
+                          {request.status === 'approved' && 'Your health card has been issued!'}
+                          {request.status === 'rejected' && 'Your request was rejected. You can submit a new one.'}
+                        </p>
+                        <button 
+                          onClick={() => window.location.href = '/health-cards'}
+                          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full"
+                        >
+                          {request.status === 'rejected' ? 'Request Again' : 'View Status'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-gray-500 mb-4 text-sm">
+                          Request your digital health card to access medical services.
+                        </p>
+                        <button 
+                          onClick={() => window.location.href = '/health-cards'}
+                          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full flex items-center justify-center"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Request Health Card
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Medical Departments */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Medical Departments</h2>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  {departments.map((dept, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg bg-${dept.color}-50`}>
+                          <dept.icon className={`h-5 w-5 text-${dept.color}-600`} />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{dept.name}</p>
+                          <p className="text-sm text-gray-500">{dept.doctors} doctors</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <button className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">Book Appointment</span>
+                  </button>
+
+                  <button className="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-center">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <FileText className="h-5 w-5 text-green-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">Medical Records</span>
+                  </button>
+
+                  <button className="p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-center">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <UserCheck className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">Find Doctors</span>
+                  </button>
+
+                  <button className="p-4 border border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors text-center">
+                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                      <Phone className="h-5 w-5 text-red-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">Emergency</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg flex items-center">
-          <div className="bg-red-100 p-2 rounded-full mr-3">
-            <Mail size={20} className="text-red-600" />
+
+        {/* Recent Activity */}
+        <div className="mt-8 bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-700">Email</p>
-            <p className="text-red-600">emergency@hospital.com</p>
+          <div className="p-6">
+            <div className="space-y-4">
+              {recentAppointments.map((appointment, index) => (
+                <div key={index} className="flex items-center justify-between py-3">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Completed appointment with Dr. {appointment.doctorName}</p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(appointment.appointmentDate).toLocaleDateString()} • {appointment.appointmentType}
+                      </p>
+                    </div>
+                  </div>
+                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    View Details
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
