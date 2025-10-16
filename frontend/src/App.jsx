@@ -22,6 +22,7 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import PatientTreatmentRecords from "./pages/PatientTreatmentRecords";
 import Payment from "./pages/Payment";
 import PatientHealthCard from "./pages/PatientHealthCard";
+import PatientDetail from "./pages/PatientDetail";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -116,6 +117,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute allowedRoles={["admin", "staff"]}>
               <Patients />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="patients/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff"]}>
+              <PatientDetail />
             </ProtectedRoute>
           }
         />
