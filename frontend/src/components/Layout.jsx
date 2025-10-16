@@ -55,12 +55,12 @@ const Layout = () => {
   const isActive = (path) => location.pathname === path
 
   return (
-    <div className="flex w-full min-h-screen bg-gray-50">
+    <div className="flex w-full h-screen bg-gray-50 overflow-hidden">
       {/* Mobile sidebar overlay */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-gradient-to-b from-blue-700 to-blue-900 text-white shadow-lg">
-          <div className="flex h-16 items-center justify-between px-6">
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-gradient-to-b from-blue-700 to-blue-900 text-white shadow-xl">
+          <div className="flex h-16 items-center justify-between px-6 shrink-0">
             <div className="flex items-center space-x-2">
               <Activity className="text-white h-6 w-6" />
               <span className="font-bold text-xl">MediCare</span>
@@ -72,8 +72,8 @@ const Layout = () => {
               <X className="h-6 w-6" />
             </button>
           </div>
-          <p className="text-blue-200 text-xs px-6 -mt-2">Hospital Management</p>
-          <nav className="mt-8">
+          <p className="text-blue-200 text-xs px-6 -mt-2 shrink-0">Hospital Management</p>
+          <nav className="mt-8 flex-1 overflow-y-auto">
             {filteredNavigation.map((item) => {
               const Icon = item.icon
               return (
@@ -102,7 +102,7 @@ const Layout = () => {
               )
             })}
           </nav>
-          <div className="absolute bottom-0 left-0 w-64 p-4">
+          <div className="shrink-0 p-4 border-t border-blue-600/30">
             <div className="bg-blue-800/50 rounded-lg p-4 text-center">
               <p className="text-blue-200 text-xs">Need help?</p>
               <button className="mt-2 bg-white text-blue-800 rounded-lg py-2 px-4 text-sm font-medium w-full hover:bg-blue-50 transition-all">
@@ -113,16 +113,16 @@ const Layout = () => {
         </div>
       </div>
 
-      {/* Desktop sidebar */}
-      <div className="hidden lg:block w-64 bg-gradient-to-b from-blue-700 to-blue-900 min-h-screen text-white shadow-lg">
-        <div className="p-6">
+      {/* Desktop sidebar - Fixed */}
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-gradient-to-b from-blue-700 to-blue-900 text-white shadow-xl z-40">
+        <div className="p-6 shrink-0">
           <div className="flex items-center space-x-2">
             <Activity className="text-white h-6 w-6" />
             <span className="font-bold text-xl">MediCare</span>
           </div>
           <p className="text-blue-200 text-xs mt-1">Hospital Management</p>
         </div>
-        <nav className="mt-8">
+        <nav className="mt-8 flex-1 overflow-y-auto">
           {filteredNavigation.map((item) => {
             const Icon = item.icon
             return (
@@ -150,7 +150,7 @@ const Layout = () => {
             )
           })}
         </nav>
-        <div className="absolute bottom-0 left-0 w-64 p-4">
+        <div className="shrink-0 p-4 border-t border-blue-600/30">
           <div className="bg-blue-800/50 rounded-lg p-4 text-center">
             <p className="text-blue-200 text-xs">Need help?</p>
             <button className="mt-2 bg-white text-blue-800 rounded-lg py-2 px-4 text-sm font-medium w-full hover:bg-blue-50 transition-all">
@@ -160,10 +160,10 @@ const Layout = () => {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 shadow-sm">
+      {/* Main content area */}
+      <div className="lg:ml-64 flex-1 flex flex-col min-w-0">
+        {/* Header - Fixed */}
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 shadow-sm fixed top-0 right-0 left-0 lg:left-64 z-30">
           <button
             type="button"
             className="lg:hidden -m-2.5 p-2.5 text-gray-700"
@@ -206,8 +206,10 @@ const Layout = () => {
                 >
                   Profile
                 </button>
-                <div className="flex items-center text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:bg-gray-50 py-1.5 px-2 rounded-md transition-colors"
-                     onClick={handleLogout}>
+                <div 
+                  className="flex items-center text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:bg-gray-50 py-1.5 px-2 rounded-md transition-colors"
+                  onClick={handleLogout}
+                >
                   <LogOut size={16} className="mr-1" />
                   Logout
                 </div>
@@ -216,8 +218,8 @@ const Layout = () => {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        {/* Page content - Scrollable with no padding/margin */}
+        <main className="flex-1 overflow-auto mt-16 p-0 m-0">
           <Outlet />
         </main>
       </div>
