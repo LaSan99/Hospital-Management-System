@@ -46,7 +46,7 @@ const DoctorMedicalRecords = () => {
       enabled: showCreateModal,
       select: (data) => {
         const appointments = data?.data?.data?.appointments || data?.data?.appointments || []
-        return appointments.filter(apt => apt.status === 'completed')
+        return appointments.filter(apt => apt.status === 'confirmed')
       }
     }
   )
