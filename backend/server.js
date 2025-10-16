@@ -27,7 +27,7 @@ app.use(cors({
 
 // Body parsing middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded());
 
 // Database connection
 const MONGODB_URI = process.env.MONGODB_URI;
