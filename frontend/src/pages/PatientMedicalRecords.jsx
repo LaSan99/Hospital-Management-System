@@ -11,8 +11,6 @@ import {
   Pill,
   TestTube,
   Heart,
-  Scale,
-  Thermometer,
   Shield,
   Clock,
   TrendingUp,
@@ -20,15 +18,27 @@ import {
   CheckCircle,
   Plus,
   Download,
-  Eye
+  Eye,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  Stethoscope,
+  MapPin,
+  ArrowRight,
+  Sparkles
 } from 'lucide-react'
 import { medicalRecordsAPI } from '../services/api'
+import toast from 'react-hot-toast'
+import jsPDF from 'jspdf'
 
 const PatientMedicalRecords = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
 
   const { data: medicalRecordsData, isLoading, error } = useQuery(
     'patient-medical-records',
@@ -39,16 +49,10 @@ const PatientMedicalRecords = () => {
     }
   )
 
-  console.log('Medical Records Data:', medicalRecordsData)
-  console.log('User:', user)
-
   const medicalRecords = medicalRecordsData?.data?.data?.medicalRecords || 
                          medicalRecordsData?.data?.medicalRecords || 
                          []
   
-  console.log('Parsed Medical Records:', medicalRecords)
-  
-  // Filter records
   const filteredRecords = medicalRecords.filter(record => {
     const matchesSearch = 
       record.diagnosis?.mainProblem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,277 +67,363 @@ const PatientMedicalRecords = () => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     })
   }
 
-  const getRecordTypeColor = (type) => {
-    switch (type) {
-      case 'consultation':
-        return 'badge-info'
-      case 'diagnosis':
-        return 'badge-warning'
-      case 'treatment':
-        return 'badge-success'
-      case 'follow_up':
-        return 'badge-info'
-      default:
-        return 'badge-warning'
+  // Handle View Details
+  const handleViewDetails = (record) => {
+    setSelectedRecord(record)
+    setShowDetailsModal(true)
+  }
+
+  // Handle Download Record
+  const handleDownloadRecord = (record) => {
+    try {
+      const doc = new jsPDF()
+      
+      // Header
+      doc.setFillColor(59, 130, 246)
+      doc.rect(0, 0, 210, 30, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(18)
+      doc.text('Medical Record', 105, 15, { align: 'center' })
+      doc.setFontSize(10)
+      doc.text('MediCare Clinic - Confidential Medical Document', 105, 22, { align: 'center' })
+
+      doc.setTextColor(0, 0, 0)
+      
+      let yPos = 40
+      
+      // Patient Information
+      doc.setFontSize(12)
+      doc.text('Patient Information', 14, yPos)
+      yPos += 8
+      doc.setFontSize(10)
+      doc.text(`Name: ${user?.firstName} ${user?.lastName}`, 14, yPos)
+      yPos += 6
+      doc.text(`Record Date: ${formatDate(record.createdAt)}`, 14, yPos)
+      yPos += 10
+
+      // Doctor Information
+      doc.setFontSize(12)
+      doc.text('Doctor Information', 14, yPos)
+      yPos += 8
+      doc.setFontSize(10)
+      doc.text(`Doctor: Dr. ${record.doctorId?.firstName} ${record.doctorId?.lastName}`, 14, yPos)
+      yPos += 6
+      doc.text(`Specialization: ${record.doctorId?.specialization || 'General Practice'}`, 14, yPos)
+      yPos += 10
+
+      // Diagnosis
+      if (record.diagnosis) {
+        doc.setFontSize(12)
+        doc.text('Diagnosis', 14, yPos)
+        yPos += 8
+        doc.setFontSize(10)
+        doc.text(`Main Problem: ${record.diagnosis.mainProblem}`, 14, yPos)
+        yPos += 6
+        
+        if (record.diagnosis.symptoms && record.diagnosis.symptoms.length > 0) {
+          doc.text('Symptoms:', 14, yPos)
+          yPos += 6
+          record.diagnosis.symptoms.forEach(symptom => {
+            doc.text(`• ${symptom}`, 20, yPos)
+            yPos += 5
+          })
+        }
+        
+        if (record.diagnosis.notes) {
+          yPos += 3
+          doc.text(`Notes: ${record.diagnosis.notes}`, 14, yPos)
+          yPos += 8
+        } else {
+          yPos += 5
+        }
+      }
+
+      // Medications
+      if (record.treatment?.medications?.length > 0) {
+        doc.setFontSize(12)
+        doc.text('Prescribed Medications', 14, yPos)
+        yPos += 8
+        doc.setFontSize(10)
+        
+        record.treatment.medications.forEach((med, index) => {
+          doc.text(`${med.name} - ${med.dosage}`, 14, yPos)
+          yPos += 5
+          doc.text(`${med.frequency} for ${med.duration}`, 20, yPos)
+          yPos += 5
+          if (med.instructions) {
+            doc.text(`Instructions: ${med.instructions}`, 20, yPos)
+            yPos += 5
+          }
+          yPos += 3
+        })
+        yPos += 2
+      }
+
+      // Footer
+      doc.setFontSize(8)
+      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 280, { align: 'center' })
+      doc.text('This is a confidential medical document - Handle with care', 105, 285, { align: 'center' })
+
+      doc.save(`medical_record_${record._id}.pdf`)
+      toast.success('Medical record downloaded successfully!')
+    } catch (error) {
+      console.error('PDF generation error:', error)
+      toast.error('Failed to download medical record')
+    }
+  }
+
+  // Handle Export All
+  const handleExportAll = () => {
+    if (filteredRecords.length === 0) {
+      toast.error('No records to export')
+      return
+    }
+
+    try {
+      // Create a simple CSV export for all records
+      const headers = ['Date', 'Doctor', 'Diagnosis', 'Record Type']
+      const csvData = filteredRecords.map(record => [
+        formatDate(record.createdAt),
+        `Dr. ${record.doctorId?.firstName} ${record.doctorId?.lastName}`,
+        record.diagnosis?.mainProblem || 'N/A',
+        record.recordType
+      ])
+
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `medical_records_export_${new Date().toISOString().split('T')[0]}.csv`
+      link.click()
+      window.URL.revokeObjectURL(url)
+      
+      toast.success(`Exported ${filteredRecords.length} medical records`)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export records')
     }
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="spinner h-8 w-8" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your medical records...</p>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Medical Records</h3>
-          <p className="text-red-600">
-            {error.response?.data?.message || 'Failed to load medical records. Please try again.'}
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-sm p-8 max-w-md text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Records</h3>
+          <p className="text-gray-600 mb-6">
+            {error.response?.data?.message || 'Failed to load medical records.'}
           </p>
-          <p className="text-sm text-red-500 mt-2">
-            Error details: {error.message}
-          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 bg-gray-50">
-      {/* Welcome Banner */}
-      <WelcomeBanner navigate={navigate} />
-      
-      {/* Stats Cards */}
-      <StatsCards 
-        totalRecords={medicalRecords.length}
-        filteredRecords={filteredRecords.length}
-        recordTypes={['consultation', 'diagnosis', 'treatment', 'follow_up']}
-      />
-      
-      {/* Search and Filters */}
-      <SearchSection 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filterType={filterType}
-        setFilterType={setFilterType}
-        navigate={navigate}
-      />
+    <div className="min-h-screen bg-gray-50 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-4">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Medical Records</h1>
+                  <p className="text-gray-600 text-sm">Your complete health history in one place</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate('/book-appointment')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center shadow-sm hover:shadow-md text-sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Appointment
+              </button>
+            </div>
+          </div>
+        </div>
 
-      {/* Results Count */}
-      <div className="text-sm text-gray-600 mb-6">
-        Showing {filteredRecords.length} of {medicalRecords.length} medical records
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            icon={<FileText className="h-5 w-5 text-blue-600" />}
+            label="Total Records"
+            value={medicalRecords.length}
+            description="Medical documents"
+            color="blue"
+          />
+          <StatCard
+            icon={<Activity className="h-5 w-5 text-green-600" />}
+            label="Active Issues"
+            value={medicalRecords.filter(r => r.recordType === 'diagnosis').length}
+            description="Current conditions"
+            color="green"
+          />
+          <StatCard
+            icon={<Pill className="h-5 w-5 text-purple-600" />}
+            label="Medications"
+            value={medicalRecords.reduce((acc, record) => acc + (record.treatment?.medications?.length || 0), 0)}
+            description="Active prescriptions"
+            color="purple"
+          />
+          <StatCard
+            icon={<Shield className="h-5 w-5 text-amber-600" />}
+            label="Privacy"
+            value="Protected"
+            description="HIPAA compliant"
+            color="amber"
+          />
+        </div>
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+            <div className="flex-1 max-w-2xl">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by condition, doctor, or symptoms..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+                {showFilters ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+              </button>
+            </div>
+          </div>
+          
+          {/* Filters */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'all', label: 'All Records' },
+                  { value: 'consultation', label: 'Consultations' },
+                  { value: 'diagnosis', label: 'Diagnoses' },
+                  { value: 'treatment', label: 'Treatments' },
+                  { value: 'follow_up', label: 'Follow-ups' }
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterType(value)}
+                    className={`px-3 py-1 rounded-lg font-medium transition-colors text-sm ${
+                      filterType === value
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Results Count */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm text-gray-600">
+            Showing {filteredRecords.length} of {medicalRecords.length} medical records
+          </div>
+          {filteredRecords.length > 0 && (
+            <button 
+              onClick={handleExportAll}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Export All
+            </button>
+          )}
+        </div>
+
+        {/* Medical Records List */}
+        {filteredRecords.length > 0 ? (
+          <div className="space-y-4">
+            {filteredRecords.map((record) => (
+              <MedicalRecordCard
+                key={record._id}
+                record={record}
+                formatDate={formatDate}
+                onViewDetails={() => handleViewDetails(record)}
+                onDownloadRecord={() => handleDownloadRecord(record)}
+              />
+            ))}
+          </div>
+        ) : (
+          <NoRecordsFound searchTerm={searchTerm} filterType={filterType} navigate={navigate} />
+        )}
       </div>
 
-      {/* Medical Records List */}
-      {filteredRecords.length > 0 ? (
-        <MedicalRecordsList 
-          filteredRecords={filteredRecords}
+      {/* Details Modal */}
+      {showDetailsModal && selectedRecord && (
+        <DetailsModal 
+          record={selectedRecord}
           formatDate={formatDate}
-          getRecordTypeColor={getRecordTypeColor}
+          onClose={() => setShowDetailsModal(false)}
         />
-      ) : (
-        <NoRecordsFound searchTerm={searchTerm} filterType={filterType} navigate={navigate} />
       )}
     </div>
   )
 }
 
-// Component Functions
-const WelcomeBanner = ({ navigate }) => {
-  const handleDownloadRecords = () => {
-    // In a real app, this would trigger a download of medical records
-    alert('Download functionality would be implemented here')
-  }
-
-  const handleViewSummary = () => {
-    // Navigate to a summary view or show a modal
-    alert('Summary view would be implemented here')
+// Stat Card Component
+const StatCard = ({ icon, label, value, description, color }) => {
+  const colorClasses = {
+    blue: 'bg-blue-50 border-blue-200',
+    green: 'bg-green-50 border-green-200',
+    purple: 'bg-purple-50 border-purple-200',
+    amber: 'bg-amber-50 border-amber-200'
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 mb-6">
-      <div className="flex flex-col md:flex-row">
-        {/* Left content area */}
-        <div className="p-6 md:p-8 flex-1">
-          <div className="flex items-center mb-4">
-            <div className="bg-blue-600 p-2 rounded-lg mr-3">
-              <FileText size={20} className="text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Medical Records
-            </h1>
-          </div>
-          <p className="text-gray-600 mb-6 max-w-lg">
-            Access your complete medical history, diagnoses, treatments, and lab results in one secure location.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <HealthMetric
-              icon={<Shield size={18} className="text-blue-500" />}
-              label="Secure Records"
-              value="HIPAA"
-              status="normal"
-            />
-            <HealthMetric
-              icon={<Clock size={18} className="text-green-500" />}
-              label="Last Updated"
-              value="Today"
-              status="normal"
-            />
-            <HealthMetric
-              icon={<TrendingUp size={18} className="text-purple-500" />}
-              label="Health Trend"
-              value="Stable"
-              status="normal"
-            />
-          </div>
-          <div className="flex space-x-3 mt-2">
-            <button 
-              onClick={handleDownloadRecords}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              <Download className="h-4 w-4 mr-2 inline" />
-              Download Records
-            </button>
-            <button 
-              onClick={handleViewSummary}
-              className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <Eye className="h-4 w-4 mr-2 inline" />
-              View Summary
-            </button>
-          </div>
-        </div>
-        {/* Right visualization area */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 w-full md:w-1/3 p-6 flex items-center justify-center relative">
-          <div className="absolute top-0 right-0 w-full h-full opacity-10">
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              <path
-                d="M20,20 L80,20 L80,80 L20,80 Z"
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth="2"
-              />
-              <path
-                d="M30,30 L70,30 L70,70 L30,70 Z"
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth="2"
-              />
-              <path
-                d="M40,40 L60,40 L60,60 L40,60 Z"
-                fill="none"
-                stroke="#4F46E5"
-                strokeWidth="2"
-              />
-            </svg>
-          </div>
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="w-32 h-32 rounded-full bg-white shadow-lg flex items-center justify-center mb-4">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center animate-pulse">
-                <FileText size={40} className="text-white" />
-              </div>
-            </div>
-            <p className="text-blue-800 font-medium text-center">
-              Your health data, securely stored
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const HealthMetric = ({ icon, label, value, status }) => {
-  const statusColors = {
-    normal: 'text-green-600',
-    warning: 'text-amber-600',
-    alert: 'text-red-600',
-  }
-  return (
-    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-      <div className="flex items-center mb-1">
-        {icon}
-        <span className="text-xs text-gray-500 ml-1.5">{label}</span>
-      </div>
+    <div className={`bg-white rounded-lg p-4 shadow-sm border ${colorClasses[color]} hover:shadow-md transition-shadow`}>
       <div className="flex items-center justify-between">
-        <span className="text-lg font-semibold text-gray-800">{value}</span>
-        <span className={`text-xs font-medium ${statusColors[status]}`}>
-          {status === 'normal'
-            ? 'Secure'
-            : status === 'warning'
-              ? 'Warning'
-              : 'Alert'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-const StatsCards = ({ totalRecords, filteredRecords, recordTypes }) => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-      <StatCard
-        icon={<FileText size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-blue-400 to-blue-600"
-        label="Total Records"
-        value={totalRecords.toString()}
-        subLabel="Available"
-        accentColor="border-blue-500"
-      />
-      <StatCard
-        icon={<Search size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-green-400 to-green-600"
-        label="Search Results"
-        value={filteredRecords.toString()}
-        subLabel="Found"
-        accentColor="border-green-500"
-      />
-      <StatCard
-        icon={<Activity size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-purple-400 to-purple-600"
-        label="Record Types"
-        value={recordTypes.length.toString()}
-        subLabel="Categories"
-        accentColor="border-purple-500"
-      />
-      <StatCard
-        icon={<Shield size={24} className="text-white" />}
-        iconBg="bg-gradient-to-br from-orange-400 to-orange-600"
-        label="Privacy"
-        value="Protected"
-        subLabel="HIPAA"
-        valueClass="text-base"
-        accentColor="border-orange-500"
-      />
-    </div>
-  )
-}
-
-const StatCard = ({ icon, iconBg, label, value, subLabel, valueClass = 'text-3xl', accentColor }) => {
-  return (
-    <div
-      className={`bg-white rounded-xl p-5 shadow-md border-l-4 ${accentColor} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}
-    >
-      <div className="flex justify-between items-start">
         <div>
-          <p className="text-gray-600 text-sm font-medium">{label}</p>
-          <p className={`font-bold ${valueClass} mt-1 text-gray-800`}>
-            {value}
-          </p>
-          <p className="text-gray-400 text-xs mt-1">{subLabel}</p>
+          <p className="text-xs font-medium text-gray-600">{label}</p>
+          <p className="text-xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-xs text-gray-500 mt-1">{description}</p>
         </div>
-        <div
-          className={`${iconBg} w-12 h-12 rounded-lg flex items-center justify-center shadow-md`}
-        >
+        <div className="p-2 bg-white rounded-lg shadow-sm">
           {icon}
         </div>
       </div>
@@ -341,334 +431,322 @@ const StatCard = ({ icon, iconBg, label, value, subLabel, valueClass = 'text-3xl
   )
 }
 
-const SearchSection = ({ searchTerm, setSearchTerm, filterType, setFilterType, navigate }) => {
-  const handleAddRecord = () => {
-    // Navigate to book appointment to create a new medical record
-    navigate('/book-appointment')
-  }
-
+// No Records Found Component
+const NoRecordsFound = ({ searchTerm, filterType, navigate }) => {
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-6">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search medical records..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+    <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+      <div className="max-w-md mx-auto">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="h-8 w-8 text-gray-400" />
         </div>
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white"
-        >
-          <option value="all">All Types</option>
-          <option value="consultation">Consultation</option>
-          <option value="diagnosis">Diagnosis</option>
-          <option value="treatment">Treatment</option>
-          <option value="follow_up">Follow-up</option>
-        </select>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          {searchTerm || filterType !== 'all' ? 'No records found' : 'No medical records yet'}
+        </h3>
+        <p className="text-gray-500 text-sm mb-6">
+          {searchTerm || filterType !== 'all' 
+            ? 'Try adjusting your search or filter criteria'
+            : 'Your medical records will appear here after your appointments'
+          }
+        </p>
         <button 
-          onClick={handleAddRecord}
-          className="flex items-center px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+          onClick={() => navigate('/book-appointment')}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center text-sm"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Record
+          <Calendar className="h-4 w-4 mr-1" />
+          Book First Appointment
         </button>
       </div>
     </div>
   )
 }
 
-const NoRecordsFound = ({ searchTerm, filterType, navigate }) => {
-  const handleClearFilters = () => {
-    // This would clear the search and filter state
-    // Since we don't have access to the setters here, we'll navigate to refresh
-    window.location.reload()
+// Medical Record Card Component
+const MedicalRecordCard = ({ record, formatDate, onViewDetails, onDownloadRecord }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const getRecordTypeConfig = (type) => {
+    const configs = {
+      consultation: { color: 'bg-blue-100 text-blue-800', icon: <UserCheck className="h-3 w-3" /> },
+      diagnosis: { color: 'bg-red-100 text-red-800', icon: <Activity className="h-3 w-3" /> },
+      treatment: { color: 'bg-green-100 text-green-800', icon: <Pill className="h-3 w-3" /> },
+      follow_up: { color: 'bg-purple-100 text-purple-800', icon: <Calendar className="h-3 w-3" /> }
+    }
+    return configs[type] || configs.consultation
   }
 
-  const handleBookAppointment = () => {
-    navigate('/book-appointment')
-  }
+  const typeConfig = getRecordTypeConfig(record.recordType)
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-      <div className="text-center py-12">
-        <div className="w-20 h-20 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center mb-4 mx-auto shadow-md">
-          <FileText className="text-white" size={32} />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {searchTerm || filterType !== 'all' ? 'No medical records found' : 'No medical records yet'}
-        </h3>
-        <p className="text-gray-500 mb-4">
-          {searchTerm || filterType !== 'all' 
-            ? 'Try adjusting your search or filter criteria'
-            : 'Your medical records will appear here after your appointments'
-          }
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          {searchTerm || filterType !== 'all' ? (
-            <button 
-              onClick={handleClearFilters}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Clear Filters
-            </button>
-          ) : (
-            <button 
-              onClick={handleBookAppointment}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Book Appointment
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const MedicalRecordsList = ({ filteredRecords, formatDate, getRecordTypeColor }) => {
-  return (
-    <div className="space-y-6">
-      {filteredRecords.map((record) => (
-        <MedicalRecordCard
-          key={record._id}
-          record={record}
-          formatDate={formatDate}
-          getRecordTypeColor={getRecordTypeColor}
-        />
-      ))}
-    </div>
-  )
-}
-
-const MedicalRecordCard = ({ record, formatDate, getRecordTypeColor }) => {
-  const handleViewDetails = () => {
-    // In a real app, this would open a detailed view or modal
-    alert(`Viewing details for: ${record.diagnosis?.mainProblem || 'Medical Record'}`)
-  }
-
-  const handleDownloadRecord = () => {
-    // In a real app, this would download the specific record
-    alert(`Downloading record: ${record.diagnosis?.mainProblem || 'Medical Record'}`)
-  }
-
-  const handleShareRecord = () => {
-    // In a real app, this would open a share dialog
-    alert(`Sharing record: ${record.diagnosis?.mainProblem || 'Medical Record'}`)
-  }
-
-  return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300">
-      <div className="px-6 py-4 border-b border-gray-100">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-              <FileText className="h-6 w-6 text-white" />
+            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Stethoscope className="h-5 w-5 text-blue-600" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {record.diagnosis?.mainProblem || 'Medical Record'}
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold text-gray-900 truncate">
+                {record.diagnosis?.mainProblem || 'Medical Consultation'}
               </h3>
-              <p className="text-sm text-gray-500">
-                Dr. {record.doctorId?.firstName} {record.doctorId?.lastName} • {formatDate(record.createdAt)}
-              </p>
+              <div className="flex items-center space-x-3 mt-1">
+                <p className="text-xs text-gray-600 flex items-center truncate">
+                  <UserCheck className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">Dr. {record.doctorId?.firstName} {record.doctorId?.lastName}</span>
+                </p>
+                <p className="text-xs text-gray-500 flex items-center">
+                  <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {formatDate(record.createdAt)}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-              record.recordType === 'consultation' ? 'bg-blue-100 text-blue-800' :
-              record.recordType === 'diagnosis' ? 'bg-yellow-100 text-yellow-800' :
-              record.recordType === 'treatment' ? 'bg-green-100 text-green-800' :
-              'bg-orange-100 text-orange-800'
-            }`}>
-              {record.recordType.replace('_', ' ')}
+          <div className="flex items-center space-x-2">
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${typeConfig.color}`}>
+              {typeConfig.icon}
+              <span className="ml-1 capitalize">{record.recordType.replace('_', ' ')}</span>
             </span>
-            <div className="flex space-x-2">
-              <button
-                onClick={handleViewDetails}
-                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                title="View Details"
-              >
-                <Eye className="h-4 w-4" />
-              </button>
-              <button
-                onClick={handleDownloadRecord}
-                className="p-2 text-gray-400 hover:text-green-600 transition-colors"
-                title="Download Record"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-7 w-7 rounded border border-gray-300 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors"
+            >
+              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
           </div>
         </div>
       </div>
-              
-              <div className="px-6 py-4 space-y-4">
-                {/* Diagnosis */}
-                {record.diagnosis && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                      <Activity className="h-4 w-4 mr-2 text-red-500" />
-                      Diagnosis
-                    </h4>
-            <div className="bg-red-50 rounded-lg p-4 border border-red-100">
-                      <p className="text-sm text-gray-700 mb-2">
-                        <span className="font-medium">Main Problem:</span> {record.diagnosis.mainProblem}
-                      </p>
-                      {record.diagnosis.symptoms && record.diagnosis.symptoms.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Symptoms:</p>
-                          <ul className="text-sm text-gray-600 list-disc list-inside">
-                            {record.diagnosis.symptoms.map((symptom, index) => (
-                              <li key={index}>{symptom}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {record.diagnosis.notes && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Notes:</span> {record.diagnosis.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* Treatment */}
-                {record.treatment && record.treatment.medications && record.treatment.medications.length > 0 && (
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="px-4 py-3 space-y-4">
+          {/* Diagnosis Section */}
+          {record.diagnosis && (
+            <Section 
+              icon={<Activity className="h-4 w-4 text-red-500" />}
+              title="Diagnosis"
+              color="red"
+            >
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs font-medium text-gray-700">Main Problem</p>
+                  <p className="text-gray-900 text-sm">{record.diagnosis.mainProblem}</p>
+                </div>
+                {record.diagnosis.symptoms && record.diagnosis.symptoms.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                      <Pill className="h-4 w-4 mr-2 text-green-500" />
-                      Medications
-                    </h4>
-            <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                      {record.treatment.medications.map((medication, index) => (
-                        <div key={index} className="mb-3 last:mb-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-900">{medication.name}</p>
-                            <p className="text-sm text-gray-600">{medication.dosage}</p>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            {medication.frequency} • {medication.duration}
-                          </p>
-                          {medication.instructions && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              <span className="font-medium">Instructions:</span> {medication.instructions}
-                            </p>
-                          )}
-                        </div>
+                    <p className="text-xs font-medium text-gray-700 mb-1">Symptoms</p>
+                    <div className="flex flex-wrap gap-1">
+                      {record.diagnosis.symptoms.map((symptom, index) => (
+                        <span key={index} className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded-full text-xs">
+                          {symptom}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* Lab Results */}
-                {record.labResults && record.labResults.length > 0 && (
+                {record.diagnosis.notes && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                      <TestTube className="h-4 w-4 mr-2 text-purple-500" />
-                      Lab Results
-                    </h4>
-            <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-                      {record.labResults.map((lab, index) => (
-                        <div key={index} className="mb-3 last:mb-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-900">{lab.testName}</p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      lab.status === 'normal' ? 'bg-green-100 text-green-800' : 
-                      lab.status === 'abnormal' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {lab.status}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Result: {lab.result} {lab.normalRange && `(Normal: ${lab.normalRange})`}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(lab.testDate)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                    <p className="text-xs font-medium text-gray-700">Notes</p>
+                    <p className="text-gray-600 text-sm">{record.diagnosis.notes}</p>
                   </div>
                 )}
+              </div>
+            </Section>
+          )}
 
-                {/* Vital Signs */}
-                {record.vitalSigns && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                      <Heart className="h-4 w-4 mr-2 text-blue-500" />
-                      Vital Signs
-                    </h4>
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {record.vitalSigns.bloodPressure && (
-                          <div>
-                            <p className="text-xs text-gray-500">Blood Pressure</p>
-                            <p className="text-sm font-medium text-gray-900">{record.vitalSigns.bloodPressure}</p>
-                          </div>
-                        )}
-                        {record.vitalSigns.heartRate && (
-                          <div>
-                            <p className="text-xs text-gray-500">Heart Rate</p>
-                            <p className="text-sm font-medium text-gray-900">{record.vitalSigns.heartRate} bpm</p>
-                          </div>
-                        )}
-                        {record.vitalSigns.temperature && (
-                          <div>
-                            <p className="text-xs text-gray-500">Temperature</p>
-                            <p className="text-sm font-medium text-gray-900">{record.vitalSigns.temperature}°F</p>
-                          </div>
-                        )}
-                        {record.vitalSigns.weight && (
-                          <div>
-                            <p className="text-xs text-gray-500">Weight</p>
-                            <p className="text-sm font-medium text-gray-900">{record.vitalSigns.weight} kg</p>
-                          </div>
-                        )}
+          {/* Medications Section */}
+          {record.treatment?.medications?.length > 0 && (
+            <Section 
+              icon={<Pill className="h-4 w-4 text-green-500" />}
+              title="Medications"
+              color="green"
+            >
+              <div className="space-y-3">
+                {record.treatment.medications.map((medication, index) => (
+                  <div key={index} className="flex items-start justify-between p-2 bg-green-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-gray-900 text-sm">{medication.name}</p>
+                        <p className="text-xs text-gray-600">{medication.dosage}</p>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Follow-up */}
-                {record.followUp && record.followUp.nextAppointment && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-orange-500" />
-                      Follow-up
-                    </h4>
-            <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium">Next Appointment:</span> {formatDate(record.followUp.nextAppointment)}
+                      <p className="text-xs text-gray-600">
+                        {medication.frequency} • {medication.duration}
                       </p>
-                      {record.followUp.instructions && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Instructions:</span> {record.followUp.instructions}
+                      {medication.instructions && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          <span className="font-medium">Instructions:</span> {medication.instructions}
                         </p>
                       )}
                     </div>
                   </div>
-                )}
+                ))}
+              </div>
+            </Section>
+          )}
 
-                {/* Doctor Notes */}
-                {record.doctorNotes && (
+          {/* Vital Signs Section */}
+          {record.vitalSigns && (
+            <Section 
+              icon={<Heart className="h-4 w-4 text-blue-500" />}
+              title="Vital Signs"
+              color="blue"
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {record.vitalSigns.bloodPressure && (
+                  <div className="text-center p-2 bg-blue-50 rounded">
+                    <p className="text-xs text-gray-500">Blood Pressure</p>
+                    <p className="font-semibold text-gray-900 text-sm">{record.vitalSigns.bloodPressure}</p>
+                  </div>
+                )}
+                {record.vitalSigns.heartRate && (
+                  <div className="text-center p-2 bg-blue-50 rounded">
+                    <p className="text-xs text-gray-500">Heart Rate</p>
+                    <p className="font-semibold text-gray-900 text-sm">{record.vitalSigns.heartRate} bpm</p>
+                  </div>
+                )}
+                {record.vitalSigns.temperature && (
+                  <div className="text-center p-2 bg-blue-50 rounded">
+                    <p className="text-xs text-gray-500">Temperature</p>
+                    <p className="font-semibold text-gray-900 text-sm">{record.vitalSigns.temperature}°F</p>
+                  </div>
+                )}
+                {record.vitalSigns.weight && (
+                  <div className="text-center p-2 bg-blue-50 rounded">
+                    <p className="text-xs text-gray-500">Weight</p>
+                    <p className="font-semibold text-gray-900 text-sm">{record.vitalSigns.weight} kg</p>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* Follow-up Section */}
+          {record.followUp && (
+            <Section 
+              icon={<Calendar className="h-4 w-4 text-purple-500" />}
+              title="Follow-up"
+              color="purple"
+            >
+              <div className="space-y-2">
+                {record.followUp.nextAppointment && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Doctor's Notes</h4>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                      <p className="text-sm text-gray-700">{record.doctorNotes}</p>
+                    <p className="text-xs font-medium text-gray-700">Next Appointment</p>
+                    <p className="text-gray-900 text-sm">{formatDate(record.followUp.nextAppointment)}</p>
+                  </div>
+                )}
+                {record.followUp.instructions && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-700">Instructions</p>
+                    <p className="text-gray-600 text-sm">{record.followUp.instructions}</p>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* Doctor Notes Section */}
+          {record.doctorNotes && (
+            <Section 
+              icon={<FileText className="h-4 w-4 text-gray-500" />}
+              title="Doctor's Notes"
+              color="gray"
+            >
+              <p className="text-gray-700 text-sm">{record.doctorNotes}</p>
+            </Section>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
+            <button 
+              onClick={onDownloadRecord}
+              className="px-3 py-1 border border-gray-300 text-gray-700 rounded font-medium hover:bg-gray-50 transition-colors flex items-center text-xs"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Download
+            </button>
+            <button 
+              onClick={onViewDetails}
+              className="px-3 py-1 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition-colors flex items-center text-xs"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              View Details
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Section Component for organized content
+const Section = ({ icon, title, color, children }) => {
+  const colorClasses = {
+    red: 'border-red-200',
+    green: 'border-green-200',
+    blue: 'border-blue-200',
+    purple: 'border-purple-200',
+    gray: 'border-gray-200'
+  }
+
+  return (
+    <div className={`border-l-2 ${colorClasses[color]} pl-3`}>
+      <div className="flex items-center mb-2">
+        {icon}
+        <h4 className="text-xs font-semibold text-gray-900 ml-2">{title}</h4>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+// Details Modal Component
+const DetailsModal = ({ record, formatDate, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Medical Record Details</h2>
+            <p className="text-gray-600 text-sm mt-1">
+              {formatDate(record.createdAt)} • Dr. {record.doctorId?.firstName} {record.doctorId?.lastName}
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="h-8 w-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Display all record details in an organized way */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Patient Information</h3>
+              {/* Add patient details here */}
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Medical Details</h3>
+              {/* Add medical details here */}
             </div>
           </div>
-        )}
+          
+          {/* You can expand this modal with more detailed information */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">
+              This is the detailed view of the medical record. You can add more comprehensive information here.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end p-6 border-t border-gray-200">
+          <button 
+            onClick={onClose}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   )
