@@ -73,6 +73,7 @@ export const appointmentsAPI = {
   checkIn: (id) => api.put(`/appointments/${id}/checkin`),
   getAvailability: (doctorId, date) => 
     api.get(`/appointments/availability/${doctorId}?date=${date}`),
+  processPayment: (id) => api.put(`/appointments/${id}/payment`),
 }
 
 // Medical Records API

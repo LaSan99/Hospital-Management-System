@@ -20,6 +20,7 @@ import HealthCards from "./pages/HealthCards";
 import Profile from "./pages/Profile";
 import LoadingSpinner from "./components/LoadingSpinner";
 import PatientTreatmentRecords from "./pages/PatientTreatmentRecords";
+import Payment from "./pages/Payment";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -168,6 +169,16 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
               <PatientTreatmentRecords />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Payment (Patient-only) */}
+        <Route
+          path="payment"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]}>
+              <Payment />
             </ProtectedRoute>
           }
         />
