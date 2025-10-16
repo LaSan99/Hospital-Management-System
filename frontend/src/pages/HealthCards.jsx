@@ -1,15 +1,20 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { CreditCard, Plus, Search, Filter, QrCode, Calendar, User, AlertTriangle, CheckCircle, X, Save } from 'lucide-react'
+import { CreditCard, Plus, Search, Filter, QrCode, Calendar, User, AlertTriangle, CheckCircle, X, Save, Clock, Check, XCircle } from 'lucide-react'
 import { healthCardsAPI, patientsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
 
 const HealthCards = () => {
   const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState('cards') // 'cards' or 'requests'
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState(null)
+  const [expiryDate, setExpiryDate] = useState('')
+  const [rejectionReason, setRejectionReason] = useState('')
   const [formData, setFormData] = useState({
     patientId: '',
     expiryDate: '',
@@ -26,6 +31,16 @@ const HealthCards = () => {
   const { data: healthCardsData, isLoading, error } = useQuery(
     'health-cards',
     () => healthCardsAPI.getAll(),
+    {
+      retry: 1,
+      refetchOnWindowFocus: false
+    }
+  )
+
+  // Fetch health card requests
+  const { data: requestsData, isLoading: loadingRequests } = useQuery(
+    'health-card-requests',
+    () => healthCardsAPI.getAllRequests(),
     {
       retry: 1,
       refetchOnWindowFocus: false
@@ -57,6 +72,39 @@ const HealthCards = () => {
     }
   )
 
+  // Approve request mutation
+  const approveRequestMutation = useMutation(
+    ({ id, expiryDate }) => healthCardsAPI.approveRequest(id, expiryDate),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('health-card-requests')
+        queryClient.invalidateQueries('health-cards')
+        toast.success('Health card request approved and card issued')
+        setShowApproveModal(false)
+        setSelectedRequest(null)
+        setExpiryDate('')
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to approve request')
+      }
+    }
+  )
+
+  // Reject request mutation
+  const rejectRequestMutation = useMutation(
+    ({ id, rejectionReason }) => healthCardsAPI.rejectRequest(id, rejectionReason),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('health-card-requests')
+        toast.success('Health card request rejected')
+        setRejectionReason('')
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to reject request')
+      }
+    }
+  )
+
   const healthCards = healthCardsData?.data?.data?.healthCards || 
                       healthCardsData?.data?.healthCards || 
                       []
@@ -64,6 +112,12 @@ const HealthCards = () => {
   const patients = patientsData?.data?.data?.patients || 
                    patientsData?.data?.patients || 
                    []
+
+  const requests = requestsData?.data?.data?.requests || 
+                   requestsData?.data?.requests || 
+                   []
+
+  const pendingRequests = requests.filter(r => r.status === 'pending')
 
   // Filter health cards based on search term and status
   const filteredCards = healthCards.filter(card => {
@@ -96,6 +150,40 @@ const HealthCards = () => {
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const getRequestStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'approved':
+        return 'bg-green-100 text-green-800'
+      case 'rejected':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const handleApprove = (request) => {
+    setSelectedRequest(request)
+    setShowApproveModal(true)
+  }
+
+  const handleReject = (requestId) => {
+    const reason = window.prompt('Enter rejection reason:')
+    if (reason) {
+      rejectRequestMutation.mutate({ id: requestId, rejectionReason: reason })
+    }
+  }
+
+  const handleApproveSubmit = (e) => {
+    e.preventDefault()
+    if (!expiryDate) {
+      toast.error('Please select an expiry date')
+      return
+    }
+    approveRequestMutation.mutate({ id: selectedRequest._id, expiryDate })
   }
 
   const getStatusIcon = (status) => {
@@ -162,7 +250,7 @@ const HealthCards = () => {
     createCardMutation.mutate(submitData)
   }
 
-  if (isLoading) {
+  if (isLoading || loadingRequests) {
     return <LoadingSpinner />
   }
 
@@ -185,12 +273,40 @@ const HealthCards = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Health Cards</h1>
-          <p className="text-gray-600">Manage digital health cards</p>
+          <p className="text-gray-600">Manage digital health cards and requests</p>
         </div>
         <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
           <Plus className="h-4 w-4 mr-2" />
           Issue Card
         </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('cards')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 ${
+                activeTab === 'cards'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Health Cards ({healthCards.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 ${
+                activeTab === 'requests'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Requests ({pendingRequests.length})
+            </button>
+          </nav>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -225,13 +341,16 @@ const HealthCards = () => {
         </div>
       </div>
 
-      {/* Results Count */}
-      <div className="text-sm text-gray-600">
-        Showing {filteredCards.length} of {healthCards.length} health cards
-      </div>
+      {/* Tab Content */}
+      {activeTab === 'cards' ? (
+        <>
+          {/* Results Count */}
+          <div className="text-sm text-gray-600">
+            Showing {filteredCards.length} of {healthCards.length} health cards
+          </div>
 
-      {/* Health Cards Grid */}
-      {filteredCards.length === 0 ? (
+          {/* Health Cards Grid */}
+          {filteredCards.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-center py-12">
             <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -352,6 +471,175 @@ const HealthCards = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+        </>
+      ) : (
+        /* Requests Tab */
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">
+              Health Card Requests ({requests.length})
+            </h2>
+          </div>
+          
+          {requests.length === 0 ? (
+            <div className="text-center py-12">
+              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No requests yet</h3>
+              <p className="text-gray-500">
+                Patient health card requests will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {requests.map((request) => (
+                <div key={request._id} className="px-6 py-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
+                        request.status === 'pending' ? 'bg-yellow-100' :
+                        request.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {request.status === 'pending' && <Clock className="h-5 w-5 text-yellow-600" />}
+                        {request.status === 'approved' && <CheckCircle className="h-5 w-5 text-green-600" />}
+                        {request.status === 'rejected' && <XCircle className="h-5 w-5 text-red-600" />}
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h3 className="font-medium text-gray-900">{request.patientName}</h3>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRequestStatusColor(request.status)}`}>
+                            {request.status.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <p><strong>Email:</strong> {request.patientEmail}</p>
+                          {request.patientPhone && <p><strong>Phone:</strong> {request.patientPhone}</p>}
+                          {request.bloodType && <p><strong>Blood Type:</strong> {request.bloodType}</p>}
+                          <p><strong>Requested:</strong> {formatDate(request.createdAt)}</p>
+                          
+                          {request.allergies && request.allergies.length > 0 && (
+                            <div className="mt-2">
+                              <p className="font-medium text-gray-700 mb-1">Allergies:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {request.allergies.map((allergy, index) => (
+                                  <span key={index} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    {allergy}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {request.emergencyContact && request.emergencyContact.name && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded">
+                              <p className="font-medium text-gray-700">Emergency Contact:</p>
+                              <p>{request.emergencyContact.name} - {request.emergencyContact.phone}</p>
+                              <p className="text-xs">{request.emergencyContact.relationship}</p>
+                            </div>
+                          )}
+                          
+                          {request.status === 'rejected' && request.rejectionReason && (
+                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                              <p className="font-medium text-red-800">Rejection Reason:</p>
+                              <p className="text-red-700">{request.rejectionReason}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {request.status === 'pending' && (
+                      <div className="flex space-x-2 ml-4">
+                        <button
+                          onClick={() => handleApprove(request)}
+                          className="btn btn-success btn-sm"
+                          disabled={approveRequestMutation.isLoading}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleReject(request._id)}
+                          className="btn btn-danger btn-sm"
+                          disabled={rejectRequestMutation.isLoading}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Approve Request Modal */}
+      {showApproveModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Approve Health Card Request</h2>
+              <button onClick={() => { setShowApproveModal(false); setSelectedRequest(null); setExpiryDate(''); }} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleApproveSubmit} className="p-6 space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Approving request for <strong>{selectedRequest.patientName}</strong>
+                </p>
+                
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Card Expiry Date *
+                </label>
+                <input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                  className="form-input"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Typically set to 1-5 years from today
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowApproveModal(false); setSelectedRequest(null); setExpiryDate(''); }} 
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={approveRequestMutation.isLoading} 
+                  className="btn btn-success"
+                >
+                  {approveRequestMutation.isLoading ? (
+                    <>
+                      <LoadingSpinner />
+                      <span className="ml-2">Approving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve & Issue Card
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
