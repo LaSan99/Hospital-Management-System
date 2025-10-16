@@ -285,78 +285,29 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* Role Field */}
+                {/* Role Field - Auto-set to Patient */}
                 <div>
                   <label htmlFor="role" className="block text-sm font-medium text-blue-100 mb-1">
-                    I am a
+                    Account Type
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Set role to patient
-                        const event = { target: { value: 'patient' } }
-                        register('role').onChange(event)
-                      }}
-                      className={`px-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 text-sm font-medium ${
-                        errors.role 
-                          ? 'border-red-400 focus:ring-red-400' 
-                          : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      } ${
-                        watch('role') === 'patient'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white/10 backdrop-blur-sm text-blue-200 hover:bg-white/20'
-                      }`}
-                    >
-                      Doctor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Set role to patient
-                        const event = { target: { value: 'patient' } }
-                        register('role').onChange(event)
-                      }}
-                      className={`px-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 text-sm font-medium ${
-                        errors.role 
-                          ? 'border-red-400 focus:ring-red-400' 
-                          : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      } ${
-                        watch('role') === 'patient'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white/10 backdrop-blur-sm text-blue-200 hover:bg-white/20'
-                      }`}
-                    >
-                      Nurse
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Set role to patient
-                        const event = { target: { value: 'patient' } }
-                        register('role').onChange(event)
-                      }}
-                      className={`px-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 text-sm font-medium ${
-                        errors.role 
-                          ? 'border-red-400 focus:ring-red-400' 
-                          : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      } ${
-                        watch('role') === 'patient'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white/10 backdrop-blur-sm text-blue-200 hover:bg-white/20'
-                      }`}
-                    >
-                      Patient
-                    </button>
+                  <div className="relative">
+                    <input
+                      {...register('role', {
+                        required: 'Role is required'
+                      })}
+                      type="hidden"
+                      value="patient"
+                    />
+                    <div className="w-full px-4 py-3 rounded-xl border border-blue-300/30 bg-blue-600/20 backdrop-blur-sm text-white text-center">
+                      <div className="flex items-center justify-center">
+                        <User className="h-5 w-5 mr-2 text-blue-300" />
+                        <span className="font-medium">Patient Account</span>
+                      </div>
+                    </div>
                   </div>
-                  {errors.role && (
-                    <p className="mt-1 text-sm text-red-300">{errors.role.message}</p>
-                  )}
-                  {!isAdmin && (
-                    <p className="mt-2 text-sm text-blue-200">
-                      Only patients can register here. Doctors and staff must be added by administrators.
-                    </p>
-                  )}
+                  <p className="mt-2 text-sm text-blue-200">
+                    Public registration is available for patients only. Doctors and staff accounts must be created by administrators.
+                  </p>
                 </div>
 
                 {/* Password Fields */}
