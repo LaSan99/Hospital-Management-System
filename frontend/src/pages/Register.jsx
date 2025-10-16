@@ -2,13 +2,35 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../contexts/AuthContext'
-import { Eye, EyeOff, UserPlus, User, Mail, Phone, Calendar, MapPin, Heart, Activity, Stethoscope, Clipboard, PlusCircle, Lock } from 'lucide-react'
+import { 
+  Eye, 
+  EyeOff, 
+  UserPlus, 
+  User, 
+  Mail, 
+  Phone, 
+  Calendar, 
+  MapPin, 
+  Heart, 
+  Activity, 
+  Stethoscope, 
+  Clipboard, 
+  PlusCircle, 
+  Lock,
+  Shield,
+  Building,
+  Users,
+  Award,
+  Clock,
+  Smartphone,
+  CheckCircle
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { register: registerUser, isAdmin } = useAuth()
+  const { register: registerUser } = useAuth()
   const navigate = useNavigate()
 
   const {
@@ -37,152 +59,131 @@ const Register = () => {
     }
   }
 
-  // Array of medical icons for animation
-  const medicalIcons = [
-    <Heart size={24} />,
-    <Activity size={24} />,
-    <Stethoscope size={24} />,
-    <Clipboard size={24} />,
-    <PlusCircle size={24} />,
+  // Registration benefits
+  const benefits = [
+    {
+      icon: <Calendar className="h-5 w-5" />,
+      title: "Easy Appointment Booking",
+      description: "Schedule appointments with specialists in seconds"
+    },
+    {
+      icon: <Clipboard className="h-5 w-5" />,
+      title: "Digital Health Records",
+      description: "Access your medical history anytime, anywhere"
+    },
+    {
+      icon: <Smartphone className="h-5 w-5" />,
+      title: "Telemedicine Ready",
+      description: "Virtual consultations with healthcare providers"
+    },
+    {
+      icon: <Shield className="h-5 w-5" />,
+      title: "Secure & Private",
+      description: "HIPAA compliant data protection"
+    }
   ]
 
+  // Password strength indicator
+  const getPasswordStrength = (password) => {
+    if (!password) return { strength: 0, color: 'bg-gray-300', text: '' }
+    if (password.length < 6) return { strength: 25, color: 'bg-red-500', text: 'Weak' }
+    if (password.length < 8) return { strength: 50, color: 'bg-yellow-500', text: 'Fair' }
+    if (password.length < 10) return { strength: 75, color: 'bg-blue-500', text: 'Good' }
+    return { strength: 100, color: 'bg-green-500', text: 'Strong' }
+  }
+
+  const passwordStrength = getPasswordStrength(password)
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900">
-      {/* Hospital-themed Pattern Overlay */}
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504439468489-c8920d796a29?q=80&w=3271&auto=format&fit=crop')] bg-cover bg-center opacity-5"></div>
-      
-      {/* Medical Pattern Overlay */}
-      <div className="absolute inset-0 opacity-10">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zm-20-18c9.941 0 18 8.059 18 18s-8.059 18-18 18S-8 39.941-8 30s8.059-18 18-18z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            backgroundSize: '60px 60px',
-          }}
-        ></div>
-      </div>
-      
-      {/* Floating Medical Icons */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(12)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute text-blue-200 opacity-20"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`,
-            }}
-          >
-            {medicalIcons[i % medicalIcons.length]}
-          </div>
-        ))}
-      </div>
-      
-      {/* Animated Gradient Orbs */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-      <div
-        className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"
-        style={{
-          animationDelay: '2s',
-        }}
-      ></div>
-      <div
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse"
-        style={{
-          animationDelay: '4s',
-        }}
-      ></div>
-      
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl">
-          {/* Hospital Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <Stethoscope size={32} className="text-blue-700" />
+    <div className="min-h-screen flex bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      {/* Left Panel - Registration Form */}
+      <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-2xl">
+          {/* Hospital Branding */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <Stethoscope className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">MediCare+</h1>
+                <p className="text-blue-200 text-sm">Hospital Management System</p>
+              </div>
             </div>
           </div>
-          
-          {/* Register Card */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 transition-all duration-300">
-            {/* Header */}
+
+          {/* Registration Card */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-white mb-2">
-                Create Account
-              </h1>
-              <p className="text-blue-100 text-sm">
-                Join our healthcare network
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Create Your Account
+              </h2>
+              <p className="text-blue-100">
+                Join thousands of patients in our healthcare network
               </p>
             </div>
-            
-            {/* Form */}
-            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-              <div className="space-y-5">
-                {/* Name Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="firstName" className="block text-sm font-medium text-blue-100 mb-1">
-                      First Name
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-blue-300" />
-                      </div>
-                      <input
-                        {...register('firstName', {
-                          required: 'First name is required',
-                          minLength: {
-                            value: 2,
-                            message: 'First name must be at least 2 characters'
-                          }
-                        })}
-                        type="text"
-                        className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 ${
-                          errors.firstName ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                        }`}
-                        placeholder="John"
-                      />
-                    </div>
-                    {errors.firstName && (
-                      <p className="mt-1 text-sm text-red-300">{errors.firstName.message}</p>
-                    )}
-                  </div>
 
-                  <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium text-blue-100 mb-1">
-                      Last Name
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-blue-300" />
-                      </div>
-                      <input
-                        {...register('lastName', {
-                          required: 'Last name is required',
-                          minLength: {
-                            value: 2,
-                            message: 'Last name must be at least 2 characters'
-                          }
-                        })}
-                        type="text"
-                        className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 ${
-                          errors.lastName ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                        }`}
-                        placeholder="Doe"
-                      />
+            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+              {/* Personal Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    First Name *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-blue-300" />
                     </div>
-                    {errors.lastName && (
-                      <p className="mt-1 text-sm text-red-300">{errors.lastName.message}</p>
-                    )}
+                    <input
+                      {...register('firstName', {
+                        required: 'First name is required',
+                        minLength: {
+                          value: 2,
+                          message: 'First name must be at least 2 characters'
+                        }
+                      })}
+                      type="text"
+                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                      placeholder="John"
+                    />
                   </div>
+                  {errors.firstName && (
+                    <p className="mt-1 text-sm text-red-300">{errors.firstName.message}</p>
+                  )}
                 </div>
 
-                {/* Email Field */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-blue-100 mb-1">
-                    Email Address
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    Last Name *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-blue-300" />
+                    </div>
+                    <input
+                      {...register('lastName', {
+                        required: 'Last name is required',
+                        minLength: {
+                          value: 2,
+                          message: 'Last name must be at least 2 characters'
+                        }
+                      })}
+                      type="text"
+                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                      placeholder="Doe"
+                    />
+                  </div>
+                  {errors.lastName && (
+                    <p className="mt-1 text-sm text-red-300">{errors.lastName.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    Email Address *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -197,10 +198,8 @@ const Register = () => {
                         }
                       })}
                       type="email"
-                      className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 ${
-                        errors.email ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      }`}
-                      placeholder="doctor@hospital.com"
+                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                      placeholder="john.doe@example.com"
                     />
                   </div>
                   {errors.email && (
@@ -208,10 +207,9 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* Phone Field */}
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-blue-100 mb-1">
-                    Phone Number
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    Phone Number *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -226,9 +224,7 @@ const Register = () => {
                         }
                       })}
                       type="tel"
-                      className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 ${
-                        errors.phone ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      }`}
+                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                       placeholder="+1234567890"
                     />
                   </div>
@@ -236,85 +232,83 @@ const Register = () => {
                     <p className="mt-1 text-sm text-red-300">{errors.phone.message}</p>
                   )}
                 </div>
+              </div>
 
-                {/* Date of Birth and Gender */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="dateOfBirth" className="block text-sm font-medium text-blue-100 mb-1">
-                      Date of Birth
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-blue-300" />
-                      </div>
-                      <input
-                        {...register('dateOfBirth', {
-                          required: 'Date of birth is required'
-                        })}
-                        type="date"
-                        className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white ${
-                          errors.dateOfBirth ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                        }`}
-                      />
-                    </div>
-                    {errors.dateOfBirth && (
-                      <p className="mt-1 text-sm text-red-300">{errors.dateOfBirth.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="gender" className="block text-sm font-medium text-blue-100 mb-1">
-                      Gender
-                    </label>
-                    <select
-                      {...register('gender', {
-                        required: 'Gender is required'
-                      })}
-                      className={`w-full px-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white ${
-                        errors.gender ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      }`}
-                    >
-                      <option value="" className="bg-gray-800 text-white">Select gender</option>
-                      <option value="male" className="bg-gray-800 text-white">Male</option>
-                      <option value="female" className="bg-gray-800 text-white">Female</option>
-                      <option value="other" className="bg-gray-800 text-white">Other</option>
-                    </select>
-                    {errors.gender && (
-                      <p className="mt-1 text-sm text-red-300">{errors.gender.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Role Field - Auto-set to Patient */}
+              {/* Personal Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-blue-100 mb-1">
-                    Account Type
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    Date of Birth *
                   </label>
                   <div className="relative">
-                    <input
-                      {...register('role', {
-                        required: 'Role is required'
-                      })}
-                      type="hidden"
-                      value="patient"
-                    />
-                    <div className="w-full px-4 py-3 rounded-xl border border-blue-300/30 bg-blue-600/20 backdrop-blur-sm text-white text-center">
-                      <div className="flex items-center justify-center">
-                        <User className="h-5 w-5 mr-2 text-blue-300" />
-                        <span className="font-medium">Patient Account</span>
-                      </div>
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Calendar className="h-5 w-5 text-blue-300" />
                     </div>
+                    <input
+                      {...register('dateOfBirth', {
+                        required: 'Date of birth is required'
+                      })}
+                      type="date"
+                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                    />
                   </div>
-                  <p className="mt-2 text-sm text-blue-200">
-                    Public registration is available for patients only. Doctors and staff accounts must be created by administrators.
-                  </p>
+                  {errors.dateOfBirth && (
+                    <p className="mt-1 text-sm text-red-300">{errors.dateOfBirth.message}</p>
+                  )}
                 </div>
 
-                {/* Password Fields */}
+                <div>
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    Gender *
+                  </label>
+                  <select
+                    {...register('gender', {
+                      required: 'Gender is required'
+                    })}
+                    className="w-full px-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                  >
+                    <option value="" className="bg-gray-800 text-white">Select gender</option>
+                    <option value="male" className="bg-gray-800 text-white">Male</option>
+                    <option value="female" className="bg-gray-800 text-white">Female</option>
+                    <option value="other" className="bg-gray-800 text-white">Other</option>
+                    <option value="prefer-not-to-say" className="bg-gray-800 text-white">Prefer not to say</option>
+                  </select>
+                  {errors.gender && (
+                    <p className="mt-1 text-sm text-red-300">{errors.gender.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Account Type */}
+              <div>
+                <label className="block text-sm font-medium text-blue-100 mb-2">
+                  Account Type
+                </label>
+                <input
+                  {...register('role', {
+                    required: 'Role is required'
+                  })}
+                  type="hidden"
+                  value="patient"
+                />
+                <div className="w-full px-4 py-3 bg-blue-600/20 border border-blue-400/30 rounded-xl text-white text-center">
+                  <div className="flex items-center justify-center">
+                    <User className="h-5 w-5 mr-2 text-blue-300" />
+                    <span className="font-medium">Patient Account</span>
+                    <CheckCircle className="h-4 w-4 ml-2 text-green-400" />
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-blue-200 text-center">
+                  Public registration is available for patients. Medical staff accounts require administrative approval.
+                </p>
+              </div>
+
+              {/* Password Section */}
+              <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-blue-100 mb-1">
-                      Password
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Password *
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -329,10 +323,8 @@ const Register = () => {
                           }
                         })}
                         type={showPassword ? 'text' : 'password'}
-                        className={`w-full pl-10 pr-12 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 ${
-                          errors.password ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                        }`}
-                        placeholder="••••••••"
+                        className="w-full pl-10 pr-12 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                        placeholder="Create a password"
                       />
                       <button
                         type="button"
@@ -352,8 +344,8 @@ const Register = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-blue-100 mb-1">
-                      Confirm Password
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Confirm Password *
                     </label>
                     <input
                       {...register('confirmPassword', {
@@ -361,105 +353,174 @@ const Register = () => {
                         validate: value => value === password || 'Passwords do not match'
                       })}
                       type="password"
-                      className={`w-full px-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 ${
-                        errors.confirmPassword ? 'border-red-400 focus:ring-red-400' : 'border-blue-300/30 focus:ring-blue-400 focus:border-blue-400'
-                      }`}
-                      placeholder="••••••••"
+                      className="w-full px-4 py-3 bg-white/5 border border-blue-300/20 rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                      placeholder="Confirm your password"
                     />
                     {errors.confirmPassword && (
                       <p className="mt-1 text-sm text-red-300">{errors.confirmPassword.message}</p>
                     )}
                   </div>
                 </div>
+
+                {/* Password Strength Indicator */}
+                {password && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-blue-200">
+                      <span>Password strength</span>
+                      <span className={passwordStrength.text === 'Weak' ? 'text-red-400' : 
+                                       passwordStrength.text === 'Fair' ? 'text-yellow-400' : 
+                                       passwordStrength.text === 'Good' ? 'text-blue-400' : 'text-green-400'}>
+                        {passwordStrength.text}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                        style={{ width: `${passwordStrength.strength}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
-              
+
+              {/* Terms and Conditions */}
+              <div className="flex items-start space-x-3">
+                <input
+                  {...register('terms', {
+                    required: 'You must accept the terms and conditions'
+                  })}
+                  type="checkbox"
+                  className="w-4 h-4 mt-1 text-blue-600 bg-white/5 border-blue-300/20 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <label className="text-sm text-blue-100">
+                  I agree to the{' '}
+                  <a href="#" className="text-blue-300 hover:text-blue-200 underline">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="#" className="text-blue-300 hover:text-blue-200 underline">
+                    Privacy Policy
+                  </a>
+                </label>
+              </div>
+              {errors.terms && (
+                <p className="text-sm text-red-300">{errors.terms.message}</p>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-blue-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    <span>Creating Account...</span>
+                    Creating Account...
                   </div>
                 ) : (
                   <div className="flex items-center justify-center">
                     <UserPlus className="w-5 h-5 mr-2" />
-                    <span>+ Create Account</span>
+                    Create Patient Account
                   </div>
                 )}
               </button>
             </form>
-            
-            {/* Footer */}
-            <div className="mt-8 text-center">
+
+            {/* Login Link */}
+            <div className="mt-6 text-center">
               <p className="text-sm text-blue-200">
                 Already have an account?{' '}
                 <Link
                   to="/login"
-                  className="font-medium text-blue-300 hover:text-blue-200 transition-colors"
+                  className="font-semibold text-blue-300 hover:text-white transition-colors"
                 >
-                  Sign in
+                  Sign in here
                 </Link>
               </p>
             </div>
           </div>
-          
+
           {/* Security Notice */}
           <div className="mt-6 text-center">
             <p className="text-xs text-blue-300/70 flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              Secure Medical Registration | HIPAA Compliant
+              <Shield className="h-3 w-3 mr-1" />
+              HIPAA Compliant • Enterprise Security • 24/7 Monitoring
             </p>
           </div>
         </div>
       </div>
-      
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-blue-400/30 rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
-            }}
-          ></div>
-        ))}
+
+      {/* Right Panel - Registration Benefits */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-600/20 to-cyan-600/20 backdrop-blur-sm border-l border-white/10">
+        <div className="flex-1 flex items-center justify-center p-12">
+          <div className="max-w-2xl">
+            {/* Hospital Introduction */}
+            <div className="mb-12">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                  <Building className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white">Join MediCare+</h1>
+                  <p className="text-blue-100 text-lg">Your Health, Our Priority</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-6 mb-8">
+                <div className="text-center p-4 bg-white/5 rounded-xl backdrop-blur-sm">
+                  <div className="text-2xl font-bold text-white mb-1">200+</div>
+                  <div className="text-blue-100 text-sm">Medical Experts</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl backdrop-blur-sm">
+                  <div className="text-2xl font-bold text-white mb-1">24/7</div>
+                  <div className="text-blue-100 text-sm">Care Available</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl backdrop-blur-sm">
+                  <div className="text-2xl font-bold text-white mb-1">99%</div>
+                  <div className="text-blue-100 text-sm">Patient Satisfaction</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl backdrop-blur-sm">
+                  <div className="text-2xl font-bold text-white mb-1">15min</div>
+                  <div className="text-blue-100 text-sm">Avg. Response Time</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Registration Benefits */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-white mb-6">Why Register With Us?</h3>
+              {benefits.map((benefit, index) => (
+                <div key={index} className="flex items-start space-x-4 group hover:bg-white/5 p-4 rounded-xl transition-all duration-300">
+                  <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-colors duration-300">
+                    {benefit.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white mb-1">{benefit.title}</h4>
+                    <p className="text-blue-100 text-sm">{benefit.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Testimonial */}
+            <div className="mt-12 p-6 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                  <Award className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold">Sarah Johnson</div>
+                  <div className="text-blue-200 text-sm">Patient since 2022</div>
+                </div>
+              </div>
+              <p className="text-blue-100 italic">
+                "The registration process was seamless, and the patient portal has made managing my healthcare so much easier. I can book appointments and access my records anytime!"
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      {/* Custom Animation Keyframes */}
-      <style jsx>{`
-        @keyframes float {
-          0% {
-            transform: translateY(0px) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-20px) rotate(10deg);
-          }
-          100% {
-            transform: translateY(0px) rotate(0deg);
-          }
-        }
-      `}</style>
     </div>
   )
 }
