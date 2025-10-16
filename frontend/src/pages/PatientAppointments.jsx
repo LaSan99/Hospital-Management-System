@@ -19,7 +19,8 @@ import {
   Stethoscope,
   DollarSign,
   Eye,
-  ClipboardList
+  ClipboardList,
+  CreditCard
 } from 'lucide-react'
 import { appointmentsAPI, medicalRecordsAPI } from '../services/api'
 import toast from 'react-hot-toast'

@@ -102,10 +102,20 @@ const PatientHome = () => {
     }
   )
 
+  const { data: requestData } = useQuery(
+    'my-health-card-request',
+    () => healthCardsAPI.getMyRequest(),
+    {
+      enabled: !!user,
+      retry: 1
+    }
+  )
+
   const appointments = appointmentsData?.data?.appointments || []
   const doctors = doctorsData?.data?.doctors || []
   const healthCard = healthCardData?.data?.data?.healthCard || 
                      healthCardData?.data?.healthCard
+  const request = requestData?.data?.data?.request || requestData?.data?.request
 
   // Filter patient's appointments
   const patientAppointments = appointments.filter(apt => 
@@ -527,12 +537,44 @@ const PatientHome = () => {
                   <div className="text-center py-6">
                     <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Card</h3>
-                    <p className="text-gray-500 mb-4 text-sm">
-                      Contact administration to issue your digital health card.
-                    </p>
-                    <button className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full">
-                      Request Health Card
-                    </button>
+                    {request ? (
+                      <div>
+                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mb-3 ${
+                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                          {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {request.status === 'rejected' && <AlertCircle className="h-3 w-3 mr-1" />}
+                          Request {request.status}
+                        </div>
+                        <p className="text-gray-500 mb-4 text-sm">
+                          {request.status === 'pending' && 'Your request is being reviewed by admin.'}
+                          {request.status === 'approved' && 'Your health card has been issued!'}
+                          {request.status === 'rejected' && 'Your request was rejected. You can submit a new one.'}
+                        </p>
+                        <button 
+                          onClick={() => window.location.href = '/health-cards'}
+                          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full"
+                        >
+                          {request.status === 'rejected' ? 'Request Again' : 'View Status'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-gray-500 mb-4 text-sm">
+                          Request your digital health card to access medical services.
+                        </p>
+                        <button 
+                          onClick={() => window.location.href = '/health-cards'}
+                          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full flex items-center justify-center"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Request Health Card
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
