@@ -10,6 +10,7 @@ import {
   Calendar, 
   FileText, 
   CreditCard, 
+  ClipboardList, 
   User, 
   LogOut,
   Bell,
@@ -43,6 +44,7 @@ const Layout = () => {
     { name: 'Find Doctors', href: '/doctors', icon: UserCheck },
     { name: 'My Appointments', href: '/appointments', icon: Calendar },
     { name: 'My Records', href: '/medical-records', icon: FileText },
+    { name: 'Treatment Plan', href: '/treatment-records', icon: ClipboardList },
   ]
 
   // Use patient navigation for patients, regular navigation for others

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config({ path: './config.env' });
+require('dotenv').config({ path: './.env' });
 
 // Import models
 const User = require('./models/User');
@@ -9,7 +9,7 @@ const MedicalRecord = require('./models/MedicalRecord');
 const HealthCard = require('./models/HealthCard');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hospital_management', {
+mongoose.connect(process.env.MONGODB_URI , {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })

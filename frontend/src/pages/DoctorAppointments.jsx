@@ -14,9 +14,14 @@ import {
   X,
   Eye,
   Filter,
-  FileText
+  FileText,
+  Pill,
+  Activity,
+  Plus,
+  Save,
+  Stethoscope
 } from 'lucide-react'
-import { appointmentsAPI } from '../services/api'
+import { appointmentsAPI, medicalRecordsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
 
@@ -28,46 +33,73 @@ const DoctorAppointments = () => {
   const [filterStatus, setFilterStatus] = useState('all')
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showMedicineModal, setShowMedicineModal] = useState(false)
+  const [currentAppointmentId, setCurrentAppointmentId] = useState(null)
+
+  // Full form state
+  const [formData, setFormData] = useState({
+    patientId: '',
+    appointmentId: '',
+    recordType: 'medicine',
+    diagnosis: { mainProblem: '', symptoms: '', notes: '' },
+    treatment: { medications: [], procedures: '', recommendations: '' },
+    vitalSigns: { bloodPressure: '', heartRate: '', temperature: '', weight: '', height: '' },
+    followUp: { nextAppointment: '', instructions: '', warningSigns: '' },
+    doctorNotes: '',
+    patientComplaints: ''
+  })
+  const [currentMedication, setCurrentMedication] = useState({
+    name: '', dosage: '', frequency: '', duration: '', instructions: ''
+  })
 
   const { data: appointmentsData, isLoading, error } = useQuery(
     'doctor-appointments',
     () => appointmentsAPI.getAll(),
     { 
       enabled: true,
-      refetchInterval: 30000 // Refresh every 30 seconds
+      refetchInterval: 30000
     }
   )
 
-  // Update appointment status mutation
+  // Mutation: Update appointment status
   const updateStatusMutation = useMutation(
     ({ appointmentId, newStatus }) => {
-      console.log('Updating appointment:', appointmentId, 'to status:', newStatus)
-      // Use the appropriate API endpoint based on status
       if (newStatus === 'cancelled') {
         return appointmentsAPI.cancel(appointmentId)
       }
-      // For other statuses, use the update endpoint
       return appointmentsAPI.update(appointmentId, { status: newStatus })
     },
     {
-      onSuccess: (response, variables) => {
-        console.log('Status update successful:', response.data)
-        console.log('Updated to:', variables.newStatus)
+      onSuccess: () => {
         queryClient.invalidateQueries('doctor-appointments')
         toast.success('Appointment status updated successfully')
       },
       onError: (error) => {
-        console.error('Status update failed:', error.response?.data || error.message)
         toast.error(error.response?.data?.message || 'Failed to update appointment status')
       }
     }
   )
 
-  const appointments = appointmentsData?.data?.data?.appointments || 
-                       appointmentsData?.data?.appointments || 
-                       []
+  // Mutation: Create medical record
+  const createMedicalRecordMutation = useMutation(
+    (recordData) => medicalRecordsAPI.create(recordData),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('doctor-appointments')
+        toast.success('Medical record created successfully')
+        setShowMedicineModal(false)
+        resetForm()
+      },
+      onError: (error) => {
+        console.error('Submission error:', error)
+        toast.error(error.response?.data?.message || 'Failed to create medical record')
+      }
+    }
+  )
 
-  // Filter appointments by search term and status
+  const appointments = appointmentsData?.data?.data?.appointments || 
+                       appointmentsData?.data?.appointments || []
+
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = 
       apt.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,7 +111,6 @@ const DoctorAppointments = () => {
     return matchesSearch && matchesStatus
   })
 
-  // Group appointments by status for quick stats
   const stats = {
     scheduled: appointments.filter(a => a.status === 'scheduled').length,
     confirmed: appointments.filter(a => a.status === 'confirmed').length,
@@ -90,35 +121,23 @@ const DoctorAppointments = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'completed':
-        return 'bg-gray-100 text-gray-800 border-gray-200'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200'
-      case 'no_show':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'scheduled': return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'confirmed': return 'bg-green-100 text-green-800 border-green-200'
+      case 'completed': return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200'
+      case 'no_show': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'scheduled':
-        return <Clock className="h-4 w-4" />
-      case 'confirmed':
-        return <CheckCircle className="h-4 w-4" />
-      case 'completed':
-        return <Check className="h-4 w-4" />
-      case 'cancelled':
-        return <XCircle className="h-4 w-4" />
-      case 'no_show':
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
+      case 'scheduled': return <Clock className="h-4 w-4" />
+      case 'confirmed': return <CheckCircle className="h-4 w-4" />
+      case 'completed': return <Check className="h-4 w-4" />
+      case 'cancelled': return <XCircle className="h-4 w-4" />
+      case 'no_show': return <AlertCircle className="h-4 w-4" />
+      default: return <Clock className="h-4 w-4" />
     }
   }
 
@@ -131,6 +150,139 @@ const DoctorAppointments = () => {
   const handleViewDetails = (appointment) => {
     setSelectedAppointment(appointment)
     setShowDetailsModal(true)
+  }
+
+  const resetForm = () => {
+    setFormData({
+      patientId: '',
+      appointmentId: '',
+      recordType: 'medicine',
+      diagnosis: { mainProblem: '', symptoms: '', notes: '' },
+      treatment: { medications: [], procedures: '', recommendations: '' },
+      vitalSigns: { bloodPressure: '', heartRate: '', temperature: '', weight: '', height: '' },
+      followUp: { nextAppointment: '', instructions: '', warningSigns: '' },
+      doctorNotes: '',
+      patientComplaints: ''
+    })
+    setCurrentMedication({ name: '', dosage: '', frequency: '', duration: '', instructions: '' })
+  }
+
+  const handleOpenMedicineModal = (appointmentId) => {
+    const appointment = appointments.find(apt => apt._id === appointmentId)
+    if (!appointment) {
+      toast.error('Appointment not found')
+      return
+    }
+
+    const patientId = appointment.patientId?._id || appointment.patientId
+    if (!patientId) {
+      toast.error('Patient ID missing')
+      return
+    }
+
+    setFormData({
+      patientId: patientId,
+      appointmentId: appointmentId,
+      recordType: 'medicine',
+      diagnosis: { 
+        mainProblem: appointment.reason || '', 
+        symptoms: Array.isArray(appointment.symptoms) ? appointment.symptoms.join(', ') : '', 
+        notes: '' 
+      },
+      treatment: { medications: [], procedures: '', recommendations: '' },
+      vitalSigns: { bloodPressure: '', heartRate: '', temperature: '', weight: '', height: '' },
+      followUp: { nextAppointment: '', instructions: '', warningSigns: '' },
+      doctorNotes: '',
+      patientComplaints: appointment.reason || ''
+    })
+
+    setCurrentMedication({ name: '', dosage: '', frequency: '', duration: '', instructions: '' })
+    setCurrentAppointmentId(appointmentId)
+    setShowMedicineModal(true)
+  }
+
+  const handleInputChange = (section, field, value) => {
+    if (section) {
+      setFormData(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }))
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }))
+    }
+  }
+
+  const handleAddMedication = () => {
+    if (currentMedication.name && currentMedication.dosage) {
+      setFormData(prev => ({
+        ...prev,
+        treatment: {
+          ...prev.treatment,
+          medications: [...prev.treatment.medications, { ...currentMedication }]
+        }
+      }))
+      setCurrentMedication({ name: '', dosage: '', frequency: '', duration: '', instructions: '' })
+    } else {
+      toast.error('Please fill in medication name and dosage')
+    }
+  }
+
+  const handleRemoveMedication = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      treatment: {
+        ...prev.treatment,
+        medications: prev.treatment.medications.filter((_, i) => i !== index)
+      }
+    }))
+  }
+
+  const handleSubmitMedicine = (e) => {
+    e.preventDefault()
+    
+    // Ensure doctor is authenticated
+    if (!user?._id) {
+      toast.error('Doctor not authenticated. Please log in again.')
+      return
+    }
+
+    // Ensure patient and appointment are set
+    if (!formData.patientId || !formData.appointmentId) {
+      toast.error('Patient or appointment information is missing')
+      return
+    }
+
+    // 🔥 CRITICAL: Require at least one medication for 'medicine' type
+    if (formData.recordType === 'medicine' && formData.treatment.medications.length === 0) {
+      toast.error('At least one medication is required for medicine records')
+      return
+    }
+
+    // Format arrays
+    const submitData = {
+      doctorId: user._id, // ✅ Required by backend
+      ...formData,
+      diagnosis: {
+        ...formData.diagnosis,
+        symptoms: formData.diagnosis.symptoms 
+          ? formData.diagnosis.symptoms.split(',').map(s => s.trim()).filter(Boolean) 
+          : []
+      },
+      treatment: {
+        ...formData.treatment,
+        procedures: formData.treatment.procedures 
+          ? formData.treatment.procedures.split(',').map(s => s.trim()).filter(Boolean) 
+          : [],
+        recommendations: formData.treatment.recommendations 
+          ? formData.treatment.recommendations.split(',').map(s => s.trim()).filter(Boolean) 
+          : []
+      },
+      followUp: {
+        ...formData.followUp,
+        warningSigns: formData.followUp.warningSigns 
+          ? formData.followUp.warningSigns.split(',').map(s => s.trim()).filter(Boolean) 
+          : []
+      }
+    }
+
+    createMedicalRecordMutation.mutate(submitData)
   }
 
   const formatDate = (dateString) => {
@@ -151,9 +303,7 @@ const DoctorAppointments = () => {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
-  if (isLoading) {
-    return <LoadingSpinner />
-  }
+  if (isLoading) return <LoadingSpinner />
 
   if (error) {
     return (
@@ -266,24 +416,12 @@ const DoctorAppointments = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Reason
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -297,19 +435,13 @@ const DoctorAppointments = () => {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {appointment.patientName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {appointment.patientEmail}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
+                          <div className="text-sm text-gray-500">{appointment.patientEmail}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(appointment.appointmentDate)}
-                      </div>
+                      <div className="text-sm text-gray-900">{formatDate(appointment.appointmentDate)}</div>
                       <div className="text-sm text-gray-500">
                         {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                       </div>
@@ -320,9 +452,7 @@ const DoctorAppointments = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
-                        {appointment.reason}
-                      </div>
+                      <div className="text-sm text-gray-900 max-w-xs truncate">{appointment.reason}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
@@ -340,7 +470,6 @@ const DoctorAppointments = () => {
                           <Eye className="h-4 w-4" />
                         </button>
                         
-                        {/* Add Medical Record Button - Only for completed appointments */}
                         {appointment.status === 'completed' && (
                           <button
                             onClick={() => navigate('/medical-records', { state: { appointmentId: appointment._id, patientId: appointment.patientId?._id } })}
@@ -350,8 +479,27 @@ const DoctorAppointments = () => {
                             <FileText className="h-4 w-4" />
                           </button>
                         )}
+
+                        {/* Show Medicine & Treatment buttons only if confirmed */}
+                        {appointment.status === 'confirmed' && (
+                          <>
+                            <button
+                              onClick={() => handleOpenMedicineModal(appointment._id)}
+                              className="text-purple-600 hover:text-purple-900"
+                              title="Add Medicine Record"
+                            >
+                              <Pill className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => navigate('/medical-records', { state: { appointmentId: appointment._id, patientId: appointment.patientId?._id } })}
+                              className="text-indigo-600 hover:text-indigo-900"
+                              title="Add Full Medical Record"
+                            >
+                              <Stethoscope className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                         
-                        {/* Status Change Dropdown */}
                         <select
                           value={appointment.status}
                           onChange={(e) => handleStatusChange(appointment._id, e.target.value)}
@@ -392,19 +540,13 @@ const DoctorAppointments = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Appointment Details
-              </h2>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <h2 className="text-xl font-semibold text-gray-900">Appointment Details</h2>
+              <button onClick={() => setShowDetailsModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-6 w-6" />
               </button>
             </div>
             
             <div className="p-6 space-y-6">
-              {/* Patient Information */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Patient Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -414,7 +556,6 @@ const DoctorAppointments = () => {
                 </div>
               </div>
 
-              {/* Appointment Information */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Appointment Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -431,7 +572,6 @@ const DoctorAppointments = () => {
                 </div>
               </div>
 
-              {/* Medical Information */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Medical Information</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
@@ -439,7 +579,7 @@ const DoctorAppointments = () => {
                     <p className="text-sm font-medium text-gray-700">Reason for Visit:</p>
                     <p className="text-sm text-gray-900 mt-1">{selectedAppointment.reason}</p>
                   </div>
-                  {selectedAppointment.symptoms && selectedAppointment.symptoms.length > 0 && (
+                  {selectedAppointment.symptoms?.length > 0 && (
                     <div>
                       <p className="text-sm font-medium text-gray-700">Symptoms:</p>
                       <div className="flex flex-wrap gap-2 mt-1">
@@ -460,7 +600,6 @@ const DoctorAppointments = () => {
                 </div>
               </div>
 
-              {/* Quick Actions */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Quick Actions</h3>
                 <div className="flex flex-wrap gap-2">
@@ -502,13 +641,205 @@ const DoctorAppointments = () => {
             </div>
 
             <div className="flex justify-end p-6 border-t">
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="btn btn-outline"
+              <button onClick={() => setShowDetailsModal(false)} className="btn btn-outline">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Medicine / Medical Record Modal */}
+      {showMedicineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-semibold text-gray-900">Add Medicine Record</h2>
+              <button 
+                onClick={() => { setShowMedicineModal(false); resetForm(); }} 
+                className="text-gray-400 hover:text-gray-600"
               >
-                Close
+                <X className="h-6 w-6" />
               </button>
             </div>
+            
+            <form onSubmit={handleSubmitMedicine} className="p-6 space-y-6">
+              {/* Vital Signs */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Vital Signs</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <input 
+                    type="text" 
+                    value={formData.vitalSigns.bloodPressure} 
+                    onChange={(e) => handleInputChange('vitalSigns', 'bloodPressure', e.target.value)} 
+                    placeholder="BP: 120/80" 
+                    className="form-input" 
+                  />
+                  <input 
+                    type="number" 
+                    value={formData.vitalSigns.heartRate} 
+                    onChange={(e) => handleInputChange('vitalSigns', 'heartRate', e.target.value)} 
+                    placeholder="HR (bpm)" 
+                    className="form-input" 
+                  />
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={formData.vitalSigns.temperature} 
+                    onChange={(e) => handleInputChange('vitalSigns', 'temperature', e.target.value)} 
+                    placeholder="Temp (°F)" 
+                    className="form-input" 
+                  />
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={formData.vitalSigns.weight} 
+                    onChange={(e) => handleInputChange('vitalSigns', 'weight', e.target.value)} 
+                    placeholder="Weight (kg)" 
+                    className="form-input" 
+                  />
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={formData.vitalSigns.height} 
+                    onChange={(e) => handleInputChange('vitalSigns', 'height', e.target.value)} 
+                    placeholder="Height (cm)" 
+                    className="form-input" 
+                  />
+                </div>
+              </div>
+
+              {/* Diagnosis */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Diagnosis</h3>
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    value={formData.diagnosis.mainProblem} 
+                    onChange={(e) => handleInputChange('diagnosis', 'mainProblem', e.target.value)} 
+                    placeholder="Main Problem" 
+                    className="form-input" 
+                  />
+                  <input 
+                    type="text" 
+                    value={formData.diagnosis.symptoms} 
+                    onChange={(e) => handleInputChange('diagnosis', 'symptoms', e.target.value)} 
+                    placeholder="Symptoms (comma-separated)" 
+                    className="form-input" 
+                  />
+                  <textarea 
+                    value={formData.diagnosis.notes} 
+                    onChange={(e) => handleInputChange('diagnosis', 'notes', e.target.value)} 
+                    rows={2} 
+                    placeholder="Diagnosis notes..." 
+                    className="form-textarea" 
+                  />
+                </div>
+              </div>
+
+              {/* Medications */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Medications</h3>
+                {formData.treatment.medications.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {formData.treatment.medications.map((med, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <div>
+                          <p className="font-medium">{med.name} - {med.dosage}</p>
+                          <p className="text-sm text-gray-600">{med.frequency} for {med.duration}</p>
+                          {med.instructions && <p className="text-xs text-gray-500">{med.instructions}</p>}
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveMedication(index)} 
+                          className="text-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="bg-blue-50 p-3 rounded space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input 
+                      type="text" 
+                      value={currentMedication.name} 
+                      onChange={(e) => setCurrentMedication(prev => ({ ...prev, name: e.target.value }))} 
+                      placeholder="Name *" 
+                      className="form-input" 
+                    />
+                    <input 
+                      type="text" 
+                      value={currentMedication.dosage} 
+                      onChange={(e) => setCurrentMedication(prev => ({ ...prev, dosage: e.target.value }))} 
+                      placeholder="Dosage *" 
+                      className="form-input" 
+                    />
+                    <input 
+                      type="text" 
+                      value={currentMedication.frequency} 
+                      onChange={(e) => setCurrentMedication(prev => ({ ...prev, frequency: e.target.value }))} 
+                      placeholder="Frequency" 
+                      className="form-input" 
+                    />
+                    <input 
+                      type="text" 
+                      value={currentMedication.duration} 
+                      onChange={(e) => setCurrentMedication(prev => ({ ...prev, duration: e.target.value }))} 
+                      placeholder="Duration" 
+                      className="form-input" 
+                    />
+                  </div>
+                  <textarea 
+                    value={currentMedication.instructions} 
+                    onChange={(e) => setCurrentMedication(prev => ({ ...prev, instructions: e.target.value }))} 
+                    rows={1} 
+                    placeholder="Instructions (optional)" 
+                    className="form-textarea mt-2"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddMedication} 
+                    className="btn btn-sm btn-primary"
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Medication
+                  </button>
+                </div>
+              </div>
+
+              {/* Doctor Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Doctor's Notes</label>
+                <textarea 
+                  value={formData.doctorNotes} 
+                  onChange={(e) => handleInputChange(null, 'doctorNotes', e.target.value)} 
+                  rows={3} 
+                  placeholder="Additional notes..." 
+                  className="form-textarea" 
+                />
+              </div>
+
+              {/* Submit */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowMedicineModal(false); resetForm(); }} 
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={createMedicalRecordMutation.isLoading} 
+                  className="btn btn-primary"
+                >
+                  {createMedicalRecordMutation.isLoading ? (
+                    <><LoadingSpinner size="sm" /><span className="ml-2">Creating...</span></>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-2" /> Save Medicine Record</>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
