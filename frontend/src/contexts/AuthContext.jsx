@@ -119,6 +119,19 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const refreshUser = async () => {
+    try {
+      const response = await authAPI.getProfile()
+      if (response.data.success) {
+        setUser(response.data.data.user)
+        return { success: true }
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error)
+      return { success: false }
+    }
+  }
+
   const value = {
     user,
     token,
@@ -128,6 +141,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
+    refreshUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isDoctor: user?.role === 'doctor',

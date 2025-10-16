@@ -59,6 +59,8 @@ export const doctorsAPI = {
   delete: (id) => api.delete(`/doctors/${id}`),
   getBySpecialization: (specialization) => 
     api.get(`/doctors/specialization/${specialization}`),
+  updateAvailability: (id, isAvailable) => 
+    api.put(`/doctors/${id}/availability`, { isAvailable }),
 }
 
 // Appointments API

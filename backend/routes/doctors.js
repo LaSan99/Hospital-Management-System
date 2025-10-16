@@ -189,6 +189,54 @@ router.delete('/:id', authenticateToken, authorize('admin'), async (req, res) =>
   }
 });
 
+// Update doctor availability (toggle isActive status)
+router.put('/:id/availability', authenticateToken, authorize('doctor', 'admin'), async (req, res) => {
+  try {
+    const doctor = await User.findById(req.params.id);
+    
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    if (doctor.role !== 'doctor') {
+      return res.status(400).json({
+        success: false,
+        message: 'User is not a doctor'
+      });
+    }
+
+    // Check if user can update (own availability or admin)
+    if (req.user.role !== 'admin' && req.user._id.toString() !== doctor._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Update availability status (not account status)
+    doctor.isAvailable = req.body.isAvailable;
+    await doctor.save();
+
+    res.json({
+      success: true,
+      message: `Availability ${doctor.isAvailable ? 'enabled' : 'disabled'} successfully`,
+      data: {
+        isAvailable: doctor.isAvailable
+      }
+    });
+  } catch (error) {
+    console.error('Update availability error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update availability',
+      error: error.message
+    });
+  }
+});
+
 // Get doctors by specialization
 router.get('/specialization/:specialization', async (req, res) => {
   try {

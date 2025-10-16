@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Mail, Phone, Calendar, MapPin, Save, Key } from 'lucide-react'
+import { User, Mail, Phone, Calendar, MapPin, Save, Key, ToggleLeft, ToggleRight } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { doctorsAPI } from '../services/api'
 
 const Profile = () => {
-  const { user, updateProfile, changePassword } = useAuth()
+  const { user, updateProfile, changePassword, refreshUser } = useAuth()
   const [activeTab, setActiveTab] = useState('profile')
   const [isLoading, setIsLoading] = useState(false)
+  const [isAvailable, setIsAvailable] = useState(user?.isAvailable ?? true)
 
   const {
     register,
@@ -57,21 +59,69 @@ const Profile = () => {
     }
   }
 
+  const handleAvailabilityToggle = async () => {
+    setIsLoading(true)
+    try {
+      const response = await doctorsAPI.updateAvailability(user._id, !isAvailable)
+      if (response.data.success) {
+        setIsAvailable(!isAvailable)
+        await refreshUser()
+        toast.success(response.data.message)
+      } else {
+        toast.error(response.data.message)
+      }
+    } catch (error) {
+      toast.error('Failed to update availability')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center space-x-4">
-          <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-            <User className="h-8 w-8 text-blue-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+              <User className="h-8 w-8 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {user?.firstName} {user?.lastName}
+              </h1>
+              <p className="text-gray-600 capitalize">{user?.role}</p>
+              <p className="text-sm text-gray-500">{user?.email}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {user?.firstName} {user?.lastName}
-            </h1>
-            <p className="text-gray-600 capitalize">{user?.role}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-          </div>
+          
+          {/* Availability Toggle for Doctors */}
+          {user?.role === 'doctor' && (
+            <div className="flex items-center space-x-3">
+              <span className="text-sm font-medium text-gray-700">Availability:</span>
+              <button
+                onClick={handleAvailabilityToggle}
+                disabled={isLoading}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isAvailable
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {isAvailable ? (
+                  <>
+                    <ToggleRight className="h-5 w-5" />
+                    <span>Available</span>
+                  </>
+                ) : (
+                  <>
+                    <ToggleLeft className="h-5 w-5" />
+                    <span>Unavailable</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
