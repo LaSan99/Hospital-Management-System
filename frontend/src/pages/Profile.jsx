@@ -1,7 +1,28 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Mail, Phone, Calendar, MapPin, Save, Key, ToggleLeft, ToggleRight } from 'lucide-react'
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  Calendar, 
+  MapPin, 
+  Save, 
+  Key, 
+  ToggleLeft, 
+  ToggleRight,
+  Shield,
+  Activity,
+  Settings,
+  Edit,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Award,
+  Heart
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { doctorsAPI } from '../services/api'
 
@@ -10,6 +31,9 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [isAvailable, setIsAvailable] = useState(user?.isAvailable ?? true)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const {
     register,
