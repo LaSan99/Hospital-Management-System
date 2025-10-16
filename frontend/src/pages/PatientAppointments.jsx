@@ -13,7 +13,8 @@ import {
   Phone,
   Pill,
   X,
-  Download
+  Download,
+  CreditCard
 } from 'lucide-react'
 import { appointmentsAPI, medicalRecordsAPI } from '../services/api'
 import toast from 'react-hot-toast'
@@ -111,73 +112,71 @@ const PatientAppointments = () => {
     setShowMedicineModal(true)
   }
 
+  const handleDownloadReceipt = () => {
+    try {
+      const doc = new jsPDF()
+      const appointment = patientAppointments.find(a => a._id === selectedMedicineRecord.appointmentId)
+      const fee = appointment?.consultationFee || '0.00'
 
+      // Header
+      doc.setFontSize(18)
+      doc.text('MediCare Clinic', 105, 20, { align: 'center' })
+      doc.setFontSize(10)
+      doc.text('123 Health Street, Colombo, Sri Lanka', 105, 26, { align: 'center' })
+      doc.text('Phone: +94 11 234 5678', 105, 32, { align: 'center' })
 
-const handleDownloadReceipt = () => {
-  try {
-    const doc = new jsPDF()
-    const appointment = patientAppointments.find(a => a._id === selectedMedicineRecord.appointmentId)
-    const fee = appointment?.consultationFee || '0.00'
+      // Patient & Doctor
+      doc.setFontSize(12)
+      doc.text('Patient:', 14, 45)
+      doc.text(`${user?.firstName} ${user?.lastName}`, 50, 45)
+      
+      doc.text('Doctor:', 14, 52)
+      doc.text(
+        `Dr. ${selectedMedicineRecord.doctorId?.firstName} ${selectedMedicineRecord.doctorId?.lastName}`,
+        50, 52
+      )
 
-    // Header
-    doc.setFontSize(18)
-    doc.text('MediCare Clinic', 105, 20, { align: 'center' })
-    doc.setFontSize(10)
-    doc.text('123 Health Street, Colombo, Sri Lanka', 105, 26, { align: 'center' })
-    doc.text('Phone: +94 11 234 5678', 105, 32, { align: 'center' })
+      // Financial Section
+      doc.setFontSize(14)
+      doc.text('Financial Details', 14, 65)
+      doc.setFontSize(11)
+      doc.text('Consultation Fee:', 14, 75)
+      doc.text(`$${fee}`, 180, 75, { align: 'right' })
+      doc.text('Total Paid:', 14, 82)
+      doc.text(`$${fee}`, 180, 82, { align: 'right' })
+      doc.text('Status:', 14, 89)
+      doc.text('Paid', 180, 89, { align: 'right' })
 
-    // Patient & Doctor
-    doc.setFontSize(12)
-    doc.text('Patient:', 14, 45)
-    doc.text(`${user?.firstName} ${user?.lastName}`, 50, 45)
-    
-    doc.text('Doctor:', 14, 52)
-    doc.text(
-      `Dr. ${selectedMedicineRecord.doctorId?.firstName} ${selectedMedicineRecord.doctorId?.lastName}`,
-      50, 52
-    )
-
-    // Financial Section
-    doc.setFontSize(14)
-    doc.text('Financial Details', 14, 65)
-    doc.setFontSize(11)
-    doc.text('Consultation Fee:', 14, 75)
-    doc.text(`$${fee}`, 180, 75, { align: 'right' })
-    doc.text('Total Paid:', 14, 82)
-    doc.text(`$${fee}`, 180, 82, { align: 'right' })
-    doc.text('Status:', 14, 89)
-    doc.text('Paid', 180, 89, { align: 'right' })
-
-    // Medications
-    let yPos = 100
-    doc.text('Prescribed Medications', 14, yPos)
-    yPos += 10
-
-    if (selectedMedicineRecord.treatment?.medications?.length > 0) {
-      selectedMedicineRecord.treatment.medications.forEach(med => {
-        doc.setFontSize(11)
-        doc.text(`${med.name} — ${med.dosage}`, 14, yPos)
-        yPos += 6
-        doc.setFontSize(10)
-        doc.text(`${med.frequency} for ${med.duration}`, 20, yPos)
-        yPos += 8
-      })
-    } else {
-      doc.text('No medications prescribed.', 14, yPos)
+      // Medications
+      let yPos = 100
+      doc.text('Prescribed Medications', 14, yPos)
       yPos += 10
+
+      if (selectedMedicineRecord.treatment?.medications?.length > 0) {
+        selectedMedicineRecord.treatment.medications.forEach(med => {
+          doc.setFontSize(11)
+          doc.text(`${med.name} — ${med.dosage}`, 14, yPos)
+          yPos += 6
+          doc.setFontSize(10)
+          doc.text(`${med.frequency} for ${med.duration}`, 20, yPos)
+          yPos += 8
+        })
+      } else {
+        doc.text('No medications prescribed.', 14, yPos)
+        yPos += 10
+      }
+
+      // Footer
+      doc.setFontSize(10)
+      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, yPos + 20, { align: 'center' })
+      doc.text('Thank you for choosing MediCare Clinic!', 105, yPos + 26, { align: 'center' })
+
+      doc.save(`medicine_receipt_${selectedMedicineRecord._id}.pdf`)
+    } catch (error) {
+      console.error('PDF error:', error)
+      toast.error('Failed to generate receipt')
     }
-
-    // Footer
-    doc.setFontSize(10)
-    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, yPos + 20, { align: 'center' })
-    doc.text('Thank you for choosing MediCare Clinic!', 105, yPos + 26, { align: 'center' })
-
-    doc.save(`medicine_receipt_${selectedMedicineRecord._id}.pdf`)
-  } catch (error) {
-    console.error('PDF error:', error)
-    toast.error('Failed to generate receipt')
   }
-}
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -313,7 +312,13 @@ const handleDownloadReceipt = () => {
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                            ${appointment.consultationFee || '0.00'}
+                            Fee: ${appointment.consultationFee || '0.00'}
+                          </div>
+                          <div className="flex items-center text-sm">
+                            <CreditCard className="h-4 w-4 mr-2 text-gray-400" />
+                            <span className={appointment.paymentStatus ? 'text-green-600 font-medium' : 'text-orange-600 font-medium'}>
+                              {appointment.paymentStatus ? 'Paid' : 'Unpaid'}
+                            </span>
                           </div>
                         </div>
                         
@@ -346,6 +351,16 @@ const handleDownloadReceipt = () => {
                         {getStatusIcon(appointment.status)}
                         <span className="ml-1 capitalize">{appointment.status.replace('_', ' ')}</span>
                       </span>
+                      
+                      {!appointment.paymentStatus && (
+                        <button
+                          onClick={() => window.location.href = `/payment?appointmentId=${appointment._id}`}
+                          className="btn btn-primary btn-sm flex items-center"
+                        >
+                          <CreditCard className="h-4 w-4 mr-1" />
+                          Pay Now
+                        </button>
+                      )}
                       
                       {medicineRecord && (
                         <button

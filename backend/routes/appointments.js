@@ -275,6 +275,56 @@ router.put('/:id/checkin', authenticateToken, authorize('admin', 'staff'), async
   }
 });
 
+// Process payment for appointment
+router.put('/:id/payment', authenticateToken, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    // Check permissions - only patient can pay for their appointment
+    if (appointment.patientId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Check if already paid
+    if (appointment.paymentStatus) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment already completed'
+      });
+    }
+
+    // Update payment status
+    appointment.paymentStatus = true;
+    appointment.paidAt = new Date();
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: 'Payment processed successfully',
+      data: {
+        appointment
+      }
+    });
+  } catch (error) {
+    console.error('Payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process payment',
+      error: error.message
+    });
+  }
+});
+
 // Get available time slots for a doctor
 router.get('/availability/:doctorId', async (req, res) => {
   try {

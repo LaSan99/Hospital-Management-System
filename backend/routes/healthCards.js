@@ -1,5 +1,6 @@
 const express = require('express');
 const HealthCard = require('../models/HealthCard');
+const HealthCardRequest = require('../models/HealthCardRequest');
 const User = require('../models/User');
 const { authenticateToken, authorize, canAccessOwnData } = require('../middleware/auth');
 
@@ -29,10 +30,60 @@ router.get('/', authenticateToken, authorize('admin', 'staff'), async (req, res)
   }
 });
 
-// Get health card by ID
-router.get('/:id', authenticateToken, async (req, res) => {
+// ===== HEALTH CARD REQUEST ROUTES (Must be before /:id route) =====
+
+// Get all health card requests (admin/staff only)
+router.get('/requests', authenticateToken, authorize('admin', 'staff'), async (req, res) => {
   try {
-    const healthCard = await HealthCard.findById(req.params.id)
+    const requests = await HealthCardRequest.find()
+      .populate('patientId', 'firstName lastName email phone')
+      .populate('reviewedBy', 'firstName lastName')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        requests,
+        count: requests.length
+      }
+    });
+  } catch (error) {
+    console.error('Get health card requests error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get health card requests',
+      error: error.message
+    });
+  }
+});
+
+// Get patient's own health card request
+router.get('/request/my-request', authenticateToken, authorize('patient'), async (req, res) => {
+  try {
+    const request = await HealthCardRequest.findOne({ patientId: req.user._id })
+      .populate('reviewedBy', 'firstName lastName')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: { request }
+    });
+  } catch (error) {
+    console.error('Get my health card request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get health card request',
+      error: error.message
+    });
+  }
+});
+
+// Validate health card
+router.get('/validate/:cardNumber', async (req, res) => {
+  try {
+    const { cardNumber } = req.params;
+    
+    const healthCard = await HealthCard.findOne({ cardNumber })
       .populate('patientId', 'firstName lastName email phone');
     
     if (!healthCard) {
@@ -42,15 +93,38 @@ router.get('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check access permissions
-    const canAccess = req.user.role === 'admin' || 
-                     req.user.role === 'staff' ||
-                     healthCard.patientId._id.toString() === req.user._id.toString();
+    const isValid = healthCard.isValid();
 
-    if (!canAccess) {
-      return res.status(403).json({
+    res.json({
+      success: true,
+      data: {
+        healthCard: isValid ? healthCard : null,
+        isValid,
+        message: isValid ? 'Health card is valid' : 'Health card is invalid or expired'
+      }
+    });
+  } catch (error) {
+    console.error('Validate health card error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to validate health card',
+      error: error.message
+    });
+  }
+});
+
+// Get health card by card number
+router.get('/card/:cardNumber', async (req, res) => {
+  try {
+    const { cardNumber } = req.params;
+    
+    const healthCard = await HealthCard.findOne({ cardNumber })
+      .populate('patientId', 'firstName lastName email phone');
+    
+    if (!healthCard) {
+      return res.status(404).json({
         success: false,
-        message: 'Access denied'
+        message: 'Health card not found'
       });
     }
 
@@ -61,7 +135,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get health card error:', error);
+    console.error('Get health card by number error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get health card',
@@ -105,6 +179,47 @@ router.get('/patient/:patientId', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get patient health card error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get health card',
+      error: error.message
+    });
+  }
+});
+
+// Get health card by ID (Must be after specific routes)
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const healthCard = await HealthCard.findById(req.params.id)
+      .populate('patientId', 'firstName lastName email phone');
+    
+    if (!healthCard) {
+      return res.status(404).json({
+        success: false,
+        message: 'Health card not found'
+      });
+    }
+
+    // Check access permissions
+    const canAccess = req.user.role === 'admin' || 
+                     req.user.role === 'staff' ||
+                     healthCard.patientId._id.toString() === req.user._id.toString();
+
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        healthCard
+      }
+    });
+  } catch (error) {
+    console.error('Get health card error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get health card',
@@ -285,67 +400,162 @@ router.put('/:id/unblock', authenticateToken, authorize('admin', 'staff'), async
   }
 });
 
-// Validate health card
-router.get('/validate/:cardNumber', async (req, res) => {
+// Create health card request (patient only)
+router.post('/request', authenticateToken, authorize('patient'), async (req, res) => {
   try {
-    const { cardNumber } = req.params;
-    
-    const healthCard = await HealthCard.findOne({ cardNumber })
-      .populate('patientId', 'firstName lastName email phone');
-    
-    if (!healthCard) {
-      return res.status(404).json({
+    const { bloodType, allergies, emergencyContact } = req.body;
+
+    // Check if patient already has a health card
+    const existingCard = await HealthCard.findOne({ patientId: req.user._id });
+    if (existingCard) {
+      return res.status(400).json({
         success: false,
-        message: 'Health card not found'
+        message: 'You already have a health card'
       });
     }
 
-    const isValid = healthCard.isValid();
+    // Check if patient already has a pending request
+    const existingRequest = await HealthCardRequest.findOne({ 
+      patientId: req.user._id,
+      status: 'pending'
+    });
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a pending health card request'
+      });
+    }
 
-    res.json({
+    // Create health card request
+    const request = new HealthCardRequest({
+      patientId: req.user._id,
+      patientName: req.user.getFullName(),
+      patientEmail: req.user.email,
+      patientPhone: req.user.phone,
+      bloodType,
+      allergies: allergies || [],
+      emergencyContact: emergencyContact || {}
+    });
+
+    await request.save();
+
+    res.status(201).json({
       success: true,
-      data: {
-        healthCard: isValid ? healthCard : null,
-        isValid,
-        message: isValid ? 'Health card is valid' : 'Health card is invalid or expired'
-      }
+      message: 'Health card request submitted successfully',
+      data: { request }
     });
   } catch (error) {
-    console.error('Validate health card error:', error);
+    console.error('Create health card request error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to validate health card',
+      message: 'Failed to submit health card request',
       error: error.message
     });
   }
 });
 
-// Get health card by card number
-router.get('/card/:cardNumber', async (req, res) => {
+// Approve health card request (admin/staff only)
+router.put('/request/:id/approve', authenticateToken, authorize('admin', 'staff'), async (req, res) => {
   try {
-    const { cardNumber } = req.params;
-    
-    const healthCard = await HealthCard.findOne({ cardNumber })
-      .populate('patientId', 'firstName lastName email phone');
-    
-    if (!healthCard) {
-      return res.status(404).json({
+    const { expiryDate } = req.body;
+
+    if (!expiryDate) {
+      return res.status(400).json({
         success: false,
-        message: 'Health card not found'
+        message: 'Expiry date is required'
       });
     }
 
+    const request = await HealthCardRequest.findById(req.params.id)
+      .populate('patientId', 'firstName lastName email phone');
+    
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Health card request not found'
+      });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Request has already been processed'
+      });
+    }
+
+    // Create health card
+    const healthCard = new HealthCard({
+      patientId: request.patientId._id,
+      expiryDate,
+      patientName: request.patientName,
+      patientEmail: request.patientEmail,
+      patientPhone: request.patientPhone,
+      bloodType: request.bloodType,
+      allergies: request.allergies,
+      emergencyContact: request.emergencyContact
+    });
+
+    await healthCard.save();
+
+    // Update request status
+    request.status = 'approved';
+    request.reviewedBy = req.user._id;
+    request.reviewedAt = new Date();
+    request.healthCardId = healthCard._id;
+    await request.save();
+
     res.json({
       success: true,
-      data: {
-        healthCard
-      }
+      message: 'Health card request approved and card issued',
+      data: { healthCard, request }
     });
   } catch (error) {
-    console.error('Get health card by number error:', error);
+    console.error('Approve health card request error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get health card',
+      message: 'Failed to approve health card request',
+      error: error.message
+    });
+  }
+});
+
+// Reject health card request (admin/staff only)
+router.put('/request/:id/reject', authenticateToken, authorize('admin', 'staff'), async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+
+    const request = await HealthCardRequest.findById(req.params.id);
+    
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Health card request not found'
+      });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Request has already been processed'
+      });
+    }
+
+    request.status = 'rejected';
+    request.reviewedBy = req.user._id;
+    request.reviewedAt = new Date();
+    request.rejectionReason = rejectionReason || 'No reason provided';
+    await request.save();
+
+    res.json({
+      success: true,
+      message: 'Health card request rejected',
+      data: { request }
+    });
+  } catch (error) {
+    console.error('Reject health card request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject health card request',
       error: error.message
     });
   }

@@ -73,6 +73,7 @@ export const appointmentsAPI = {
   checkIn: (id) => api.put(`/appointments/${id}/checkin`),
   getAvailability: (doctorId, date) => 
     api.get(`/appointments/availability/${doctorId}?date=${date}`),
+  processPayment: (id) => api.put(`/appointments/${id}/payment`),
 }
 
 // Medical Records API
@@ -98,6 +99,12 @@ export const healthCardsAPI = {
   unblock: (id) => api.put(`/health-cards/${id}/unblock`),
   validate: (cardNumber) => api.get(`/health-cards/validate/${cardNumber}`),
   getByCardNumber: (cardNumber) => api.get(`/health-cards/card/${cardNumber}`),
+  // Health card requests
+  createRequest: (requestData) => api.post('/health-cards/request', requestData),
+  getAllRequests: () => api.get('/health-cards/requests'),
+  getMyRequest: () => api.get('/health-cards/request/my-request'),
+  approveRequest: (id, expiryDate) => api.put(`/health-cards/request/${id}/approve`, { expiryDate }),
+  rejectRequest: (id, rejectionReason) => api.put(`/health-cards/request/${id}/reject`, { rejectionReason }),
 }
 
 // Notifications API
