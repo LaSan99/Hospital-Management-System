@@ -15,7 +15,10 @@ import {
   Shield,
   Heart,
   Zap,
-  MapPin
+  MapPin,
+  Download,
+  Share2,
+  Eye
 } from 'lucide-react'
 import { healthCardsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -151,6 +154,36 @@ const PatientHealthCard = () => {
     createRequestMutation.mutate(submitData)
   }
 
+  const handleDownloadCard = () => {
+    toast.success('Downloading health card...', {
+      icon: '📥',
+      style: {
+        background: '#3B82F6',
+        color: 'white',
+      }
+    })
+  }
+
+  const handleShareCard = () => {
+    toast.success('Share options opened', {
+      icon: '🔗',
+      style: {
+        background: '#8B5CF6',
+        color: 'white',
+      }
+    })
+  }
+
+  const handleViewDetails = () => {
+    toast.success('Opening detailed view...', {
+      icon: '👁️',
+      style: {
+        background: '#06B6D4',
+        color: 'white',
+      }
+    })
+  }
+
   if (loadingCard || loadingRequest) {
     return (
       <div className="min-h-96 flex items-center justify-center">
@@ -163,8 +196,8 @@ const PatientHealthCard = () => {
     <div className="space-y-8">
       {/* Enhanced Header */}
       <div className="text-center space-y-3">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg mb-2">
-          <CreditCard className="h-8 w-8 text-white" />
+        <div className="inline-flex items-center justify-center w-16 h-16  rounded-2xl shadow-lg mb-2">
+         
         </div>
         <h1 className="text-3xl font-bold text-gray-900 bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent">
           My Health Card
@@ -177,6 +210,33 @@ const PatientHealthCard = () => {
       {/* Health Card Display - Enhanced Design */}
       {healthCard ? (
         <div className="max-w-4xl mx-auto">
+          {/* Action Buttons - Enhanced */}
+          <div className="flex flex-wrap gap-4 justify-center mb-8">
+            <button 
+              onClick={handleDownloadCard}
+              className="btn bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
+            >
+              <Download className="h-5 w-5" />
+              <span>Download Card</span>
+            </button>
+            
+            <button 
+              onClick={handleShareCard}
+              className="btn bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
+            >
+              <Share2 className="h-5 w-5" />
+              <span>Share Card</span>
+            </button>
+            
+            <button 
+              onClick={handleViewDetails}
+              className="btn bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
+            >
+              <Eye className="h-5 w-5" />
+              <span>View Details</span>
+            </button>
+          </div>
+
           {/* Main Card */}
           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-3xl shadow-2xl p-8 text-white transform hover:scale-[1.02] transition-all duration-300">
             <div className="flex justify-between items-start mb-8">
@@ -329,10 +389,10 @@ const PatientHealthCard = () => {
             {!request || request.status === 'rejected' ? (
               <button 
                 onClick={() => setShowRequestModal(true)} 
-                className="btn btn-primary btn-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200"
+                className="btn bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3 mx-auto"
               >
-                <Plus className="h-5 w-5 mr-2" />
-                Request Health Card
+                <Plus className="h-5 w-5" />
+                <span className="text-lg">Request Health Card</span>
               </button>
             ) : null}
           </div>
@@ -401,10 +461,10 @@ const PatientHealthCard = () => {
                     </div>
                     <button 
                       onClick={() => setShowRequestModal(true)} 
-                      className="btn btn-primary bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                      className="btn bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-3"
                     >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Submit New Request
+                      <Plus className="h-5 w-5" />
+                      <span>Submit New Request</span>
                     </button>
                   </div>
                 )}
@@ -414,10 +474,10 @@ const PatientHealthCard = () => {
         </div>
       )}
 
-      {/* Enhanced Request Modal */}
+      {/* Enhanced Request Modal with Blur Background */}
       {showRequestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform animate-scale-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-lg flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform animate-scale-in border border-white/20">
             <div className="flex justify-between items-center p-8 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl z-10">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-xl">
@@ -427,7 +487,7 @@ const PatientHealthCard = () => {
               </div>
               <button 
                 onClick={() => { setShowRequestModal(false); resetForm(); }} 
-                className="p-2 hover:bg-gray-100 rounded-xl transition-colors duration-200"
+                className="p-3 hover:bg-gray-100 rounded-xl transition-all duration-200 transform hover:scale-110"
               >
                 <X className="h-6 w-6 text-gray-500" />
               </button>
@@ -443,7 +503,7 @@ const PatientHealthCard = () => {
                 <select
                   value={formData.bloodType}
                   onChange={(e) => handleInputChange(null, 'bloodType', e.target.value)}
-                  className="form-select-lg w-full"
+                  className="form-input-lg w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                 >
                   <option value="">Select your blood type...</option>
                   <option value="A+">A+</option>
@@ -468,7 +528,7 @@ const PatientHealthCard = () => {
                   value={formData.allergies}
                   onChange={(e) => handleInputChange(null, 'allergies', e.target.value)}
                   placeholder="Penicillin, Peanuts, Latex, etc."
-                  className="form-input-lg w-full"
+                  className="form-input-lg w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                 />
                 <p className="text-sm text-gray-500 mt-3">
                   Enter known allergies separated by commas. Leave blank if you have no known allergies.
@@ -476,7 +536,7 @@ const PatientHealthCard = () => {
               </div>
 
               {/* Emergency Contact */}
-              <div className="bg-gray-50 rounded-2xl p-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
                 <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center space-x-3">
                   <User className="h-5 w-5 text-blue-500" />
                   <span>Emergency Contact</span>
@@ -487,27 +547,27 @@ const PatientHealthCard = () => {
                     value={formData.emergencyContact.name}
                     onChange={(e) => handleInputChange('emergencyContact', 'name', e.target.value)}
                     placeholder="Full name of emergency contact"
-                    className="form-input-lg w-full"
+                    className="form-input-lg w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                   />
                   <input
                     type="tel"
                     value={formData.emergencyContact.phone}
                     onChange={(e) => handleInputChange('emergencyContact', 'phone', e.target.value)}
                     placeholder="Phone number with country code"
-                    className="form-input-lg w-full"
+                    className="form-input-lg w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                   />
                   <input
                     type="text"
                     value={formData.emergencyContact.relationship}
                     onChange={(e) => handleInputChange('emergencyContact', 'relationship', e.target.value)}
                     placeholder="Relationship (e.g., Spouse, Parent, Sibling)"
-                    className="form-input-lg w-full"
+                    className="form-input-lg w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                   />
                 </div>
               </div>
 
               {/* Info Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
                 <div className="flex items-start space-x-4">
                   <AlertTriangle className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
                   <div>
@@ -521,30 +581,30 @@ const PatientHealthCard = () => {
                 </div>
               </div>
 
-              {/* Submit Buttons */}
+              {/* Enhanced Submit Buttons */}
               <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
                 <button 
                   type="button" 
                   onClick={() => { setShowRequestModal(false); resetForm(); }} 
-                  className="btn btn-outline btn-lg px-8"
+                  className="btn bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 px-8 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 border border-gray-300"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={createRequestMutation.isLoading} 
-                  className="btn btn-primary btn-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-8 transform hover:scale-105 transition-all duration-200"
+                  className="btn bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {createRequestMutation.isLoading ? (
-                    <>
-                      <LoadingSpinner />
-                      <span className="ml-3">Submitting...</span>
-                    </>
+                    <div className="flex items-center space-x-3">
+                      <LoadingSpinner size="sm" />
+                      <span>Submitting...</span>
+                    </div>
                   ) : (
-                    <>
-                      <Save className="h-5 w-5 mr-3" />
-                      Submit Request
-                    </>
+                    <div className="flex items-center space-x-3">
+                      <Save className="h-5 w-5" />
+                      <span>Submit Request</span>
+                    </div>
                   )}
                 </button>
               </div>
