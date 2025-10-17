@@ -1317,7 +1317,7 @@ const HealthCards = () => {
                 
                 <div className="max-h-[calc(95vh-120px)] overflow-y-auto">
                   <form onSubmit={handleSubmit} className="p-8 space-y-8">
-                    {/* Patient Selection Section */}
+                    {/* add Patient Selection Section */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
                       <div className="flex items-center mb-4">
                         <div className="bg-blue-600 p-2 rounded-xl mr-3">
@@ -1361,7 +1361,7 @@ const HealthCards = () => {
                         <h3 className="text-lg font-bold text-gray-900">Card Details</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Expiry Date */}
+                        {/* Expiry  added */}
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-3">
                             Card Expiry Date *
