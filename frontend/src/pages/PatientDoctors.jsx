@@ -619,13 +619,13 @@ const DoctorCard = ({
       {/* Action Buttons */}
       <div className="px-6 pb-6">
         <div className="flex space-x-3">
-          <button
+          {/* <button
             onClick={() => handleViewProfile(doctor)}
             className="flex-1 flex items-center justify-center px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
           >
             <Eye className="h-4 w-4 mr-2" />
             Profile
-          </button>
+          </button> */}
           <button
             onClick={() => handleBookAppointment(doctor)}
             disabled={!doctor.isAvailable}
