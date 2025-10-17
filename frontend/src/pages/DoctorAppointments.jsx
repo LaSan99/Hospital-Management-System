@@ -625,7 +625,7 @@ const DoctorAppointments = () => {
                       </button>
                       
                       {/* Add Medicine Button with Highlight */}
-                      {appointment.status === 'confirmed' && (
+                      {appointment.status === 'completed' && (
                         <button
                           onClick={() => handleOpenMedicineModal(appointment._id)}
                           className="p-2.5 text-purple-600 bg-purple-50 border border-purple-200 rounded-xl transition-all duration-200 hover:bg-purple-100 hover:border-purple-300 hover:shadow-md flex items-center gap-1.5 relative group/medicine"
