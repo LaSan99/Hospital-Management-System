@@ -31,8 +31,10 @@ import {
   ShieldCheck,
   Edit,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { doctorsAPI } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -188,6 +190,170 @@ const Doctors = () => {
     return `${experience} year${experience > 1 ? 's' : ''} experience`
   }
 
+  const generateDoctorReportPDF = () => {
+    try {
+      console.log('Starting PDF generation...')
+      console.log('Doctors data:', doctors)
+      
+      // Check if doctors data exists
+      if (!doctors || doctors.length === 0) {
+        console.warn('No doctors data available')
+        toast.error('No doctors data available for report generation')
+        return
+      }
+      
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      let yPosition = 20
+      
+      console.log('PDF document created successfully')
+
+    // Header
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Doctor Management Report', pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 10
+
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 15
+
+    // Summary
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Summary', 20, yPosition)
+    yPosition += 10
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Total Doctors: ${doctors.length}`, 20, yPosition)
+    yPosition += 6
+    doc.text(`Available Doctors: ${doctors.filter(d => d.isAvailable).length}`, 20, yPosition)
+    yPosition += 6
+    doc.text(`Unavailable Doctors: ${doctors.filter(d => !d.isAvailable).length}`, 20, yPosition)
+    yPosition += 6
+    doc.text(`Active Doctors: ${doctors.filter(d => d.isActive).length}`, 20, yPosition)
+    yPosition += 6
+    doc.text(`Inactive Doctors: ${doctors.filter(d => !d.isActive).length}`, 20, yPosition)
+    yPosition += 15
+
+    // Specializations summary
+    const specializations = [...new Set(doctors.map(doctor => doctor.specialization).filter(Boolean))]
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Specializations', 20, yPosition)
+    yPosition += 10
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Total Specializations: ${specializations.length}`, 20, yPosition)
+    yPosition += 6
+    specializations.forEach(spec => {
+      const count = doctors.filter(d => d.specialization === spec).length
+      doc.text(`• ${spec}: ${count} doctor${count > 1 ? 's' : ''}`, 25, yPosition)
+      yPosition += 5
+    })
+    yPosition += 10
+
+    // Doctor Details
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Doctor Details', 20, yPosition)
+    yPosition += 10
+
+    doctors.forEach((doctor, index) => {
+      // Check if we need a new page
+      if (yPosition > pageHeight - 80) {
+        doc.addPage()
+        yPosition = 20
+      }
+
+      // Doctor header
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${index + 1}. Dr. ${doctor.firstName} ${doctor.lastName}`, 20, yPosition)
+      yPosition += 8
+
+      // Doctor details
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      
+      const details = [
+        `Doctor ID: ${doctor._id}`,
+        `Email: ${doctor.email}`,
+        `Phone: ${doctor.phone || 'Not provided'}`,
+        `Date of Birth: ${formatDate(doctor.dateOfBirth)}`,
+        `Age: ${getAge(doctor.dateOfBirth)}`,
+        `Gender: ${doctor.gender || 'Not specified'}`,
+        `Specialization: ${doctor.specialization || 'General Practice'}`,
+        `License Number: ${doctor.licenseNumber || 'Not provided'}`,
+        `Experience: ${formatExperience(doctor.experience)}`,
+        `Consultation Fee: $${doctor.consultationFee || '0'}`,
+        `Status: ${doctor.isActive ? 'Active' : 'Inactive'}`,
+        `Availability: ${doctor.isAvailable ? 'Available' : 'Unavailable'}`,
+      ]
+
+      if (doctor.address) {
+        details.push(`Address: ${doctor.address.street || ''}, ${doctor.address.city || ''}, ${doctor.address.state || ''}, ${doctor.address.zipCode || ''}`)
+      }
+
+      details.forEach(detail => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage()
+          yPosition = 20
+        }
+        doc.text(detail, 25, yPosition)
+        yPosition += 5
+      })
+
+      yPosition += 10
+    })
+
+    // Footer
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
+      doc.text('MediCare Hospital Management System', 20, pageHeight - 10)
+    }
+
+      // Download the PDF
+      console.log('Attempting to save PDF...')
+      doc.save(`doctor-report-${new Date().toISOString().split('T')[0]}.pdf`)
+      console.log('PDF saved successfully!')
+      toast.success('Doctor report PDF downloaded successfully!')
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Error generating PDF: ' + error.message)
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not provided'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const getAge = (dateOfBirth) => {
+    if (!dateOfBirth) return 'N/A'
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     if (name.includes('.')) {
@@ -271,7 +437,7 @@ const Doctors = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
       <div className="max-w-7xl mx-auto">
-        <WelcomeBanner navigate={navigate} doctors={doctors} specializations={specializations} />
+        <WelcomeBanner navigate={navigate} doctors={doctors} specializations={specializations} generateDoctorReportPDF={generateDoctorReportPDF} />
         
         <div className="mt-8">
           <div className="flex items-center justify-between mb-6">
@@ -633,7 +799,7 @@ const Doctors = () => {
 }
 
 // Enhanced Welcome Banner
-const WelcomeBanner = ({ navigate, doctors = [], specializations = [] }) => {
+const WelcomeBanner = ({ navigate, doctors = [], specializations = [], generateDoctorReportPDF }) => {
   const availableDoctors = doctors.filter(d => d.isAvailable).length
   const avgExperience = doctors.length > 0 
     ? Math.round(doctors.reduce((acc, doc) => acc + (parseInt(doc.experience) || 0), 0) / doctors.length)
@@ -688,16 +854,18 @@ const WelcomeBanner = ({ navigate, doctors = [], specializations = [] }) => {
             <button 
               onClick={() => {
                 try {
-                  console.log('Navigating to doctor reports')
-                  // navigate('/doctor-reports') // Uncomment when route is available
+                  console.log('Generating doctor report PDF')
+                  toast.success('Generating doctor report PDF...')
+                  generateDoctorReportPDF()
                 } catch (error) {
-                  console.error('Error navigating to doctor reports:', error)
+                  console.error('Error generating doctor report:', error)
+                  toast.error('Error generating doctor report: ' + error.message)
                 }
               }}
               className="bg-white/10 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 backdrop-blur-sm border border-white/20 flex items-center"
             >
-              <Activity size={18} className="mr-2" />
-              View Reports
+              <Download size={18} className="mr-2" />
+              Download Reports
             </button>
           </div>
         </div>
@@ -977,23 +1145,23 @@ const EnhancedDoctorCard = ({ doctor, navigate, getInitials, formatExperience, i
           )}
         </div>
 
-               {/* Action Buttons */}
-               <div className="flex space-x-3">
-                 <button 
-                   onClick={() => {
-                     try {
-                       console.log('Viewing doctor profile:', doctor._id)
-                       // navigate(`/doctors/${doctor._id}`) // Disabled for now
-                     } catch (error) {
-                       console.error('Error viewing doctor profile:', error)
-                     }
-                   }}
-                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
-                 >
-                   <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-                   View Profile
-                 </button>
-                 {isAdmin && (
+               {/* Action Buttons - Hidden for Admin */}
+               {!isAdmin && (
+                 <div className="flex space-x-3">
+                   <button 
+                     onClick={() => {
+                       try {
+                         console.log('Viewing doctor profile:', doctor._id)
+                         // navigate(`/doctors/${doctor._id}`) // Disabled for now
+                       } catch (error) {
+                         console.error('Error viewing doctor profile:', error)
+                       }
+                     }}
+                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
+                   >
+                     <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+                     View Profile
+                   </button>
                    <button 
                      onClick={() => {
                        try {
@@ -1008,8 +1176,8 @@ const EnhancedDoctorCard = ({ doctor, navigate, getInitials, formatExperience, i
                      <Edit className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
                      Edit
                    </button>
-                 )}
-               </div>
+                 </div>
+               )}
 
         {/* Quick Stats */}
         <div className="mt-4 pt-4 border-t border-gray-100">

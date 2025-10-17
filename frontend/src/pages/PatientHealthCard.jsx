@@ -11,7 +11,11 @@ import {
   CheckCircle,
   Clock,
   X,
-  Save
+  Save,
+  Shield,
+  Heart,
+  Zap,
+  MapPin
 } from 'lucide-react'
 import { healthCardsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -39,7 +43,6 @@ const PatientHealthCard = () => {
       enabled: !!user?._id,
       retry: 1,
       onError: (error) => {
-        // Don't show error if card doesn't exist
         if (error.response?.status !== 404) {
           console.error('Error fetching health card:', error)
         }
@@ -63,12 +66,20 @@ const PatientHealthCard = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('my-health-card-request')
-        toast.success('Health card request submitted successfully')
+        toast.success('Health card request submitted successfully!', {
+          icon: '✅',
+          style: {
+            background: '#10B981',
+            color: 'white',
+          }
+        })
         setShowRequestModal(false)
         resetForm()
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to submit request')
+        toast.error(error.response?.data?.message || 'Failed to submit request', {
+          icon: '❌',
+        })
       }
     }
   )
@@ -84,29 +95,29 @@ const PatientHealthCard = () => {
     })
   }
 
-  const getStatusColor = (status) => {
+  const getStatusIcon = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800'
+        return <CheckCircle className="h-4 w-4" />
       case 'expired':
-        return 'bg-red-100 text-red-800'
+        return <X className="h-4 w-4" />
       case 'blocked':
-        return 'bg-yellow-100 text-yellow-800'
+        return <AlertTriangle className="h-4 w-4" />
       default:
-        return 'bg-gray-100 text-gray-800'
+        return <Clock className="h-4 w-4" />
     }
   }
 
-  const getRequestStatusColor = (status) => {
+  const getRequestStatusIcon = (status) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
+        return <Clock className="h-4 w-4" />
       case 'approved':
-        return 'bg-green-100 text-green-800'
+        return <CheckCircle className="h-4 w-4" />
       case 'rejected':
-        return 'bg-red-100 text-red-800'
+        return <X className="h-4 w-4" />
       default:
-        return 'bg-gray-100 text-gray-800'
+        return <Clock className="h-4 w-4" />
     }
   }
 
@@ -141,73 +152,186 @@ const PatientHealthCard = () => {
   }
 
   if (loadingCard || loadingRequest) {
-    return <LoadingSpinner />
+    return (
+      <div className="min-h-96 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Health Card</h1>
-        <p className="text-gray-600">View your digital health card and request a new one</p>
+    <div className="space-y-8">
+      {/* Enhanced Header */}
+      <div className="text-center space-y-3">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg mb-2">
+          <CreditCard className="h-8 w-8 text-white" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent">
+          My Health Card
+        </h1>
+        <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+          Your digital medical identity card for quick access to essential health information
+        </p>
       </div>
 
-      {/* Health Card Display */}
+      {/* Health Card Display - Enhanced Design */}
       {healthCard ? (
-        <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg shadow-xl p-8 text-white">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">Health Card</h2>
-              <p className="text-blue-100">Digital Medical ID</p>
+        <div className="max-w-4xl mx-auto">
+          {/* Main Card */}
+          <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-3xl shadow-2xl p-8 text-white transform hover:scale-[1.02] transition-all duration-300">
+            <div className="flex justify-between items-start mb-8">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3">
+                  <Shield className="h-8 w-8 text-blue-200" />
+                  <h2 className="text-3xl font-bold">Health Card</h2>
+                </div>
+                <p className="text-blue-100 text-lg">Digital Medical ID</p>
+              </div>
+              <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-semibold backdrop-blur-sm ${
+                healthCard.status === 'active' ? 'bg-green-500/20 text-green-100 border border-green-400/30' : 
+                healthCard.status === 'expired' ? 'bg-red-500/20 text-red-100 border border-red-400/30' : 
+                'bg-yellow-500/20 text-yellow-100 border border-yellow-400/30'
+              }`}>
+                {getStatusIcon(healthCard.status)}
+                <span>{healthCard.status.toUpperCase()}</span>
+              </div>
             </div>
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-              healthCard.status === 'active' ? 'bg-green-500' : 
-              healthCard.status === 'expired' ? 'bg-red-500' : 'bg-yellow-500'
-            }`}>
-              {healthCard.status.toUpperCase()}
+
+            <div className="space-y-6">
+              <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/20">
+                <p className="text-blue-100 text-sm font-medium mb-2">Card Number</p>
+                <p className="text-4xl font-mono font-bold tracking-wider bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                  {healthCard.cardNumber}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <User className="h-5 w-5 text-blue-200" />
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Patient Name</p>
+                      <p className="font-semibold text-lg">{healthCard.patientName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Heart className="h-5 w-5 text-blue-200" />
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Blood Type</p>
+                      <p className="font-semibold text-lg">{healthCard.bloodType || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-blue-200" />
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Issue Date</p>
+                      <p className="font-semibold text-lg">{formatDate(healthCard.issueDate)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Zap className="h-5 w-5 text-blue-200" />
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Expiry Date</p>
+                      <p className="font-semibold text-lg">{formatDate(healthCard.expiryDate)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <p className="text-blue-100 text-sm">Card Number</p>
-              <p className="text-2xl font-mono font-bold">{healthCard.cardNumber}</p>
+          {/* Health Card Details - Enhanced */}
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Contact Information */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Phone className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Contact Information</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                  <span className="text-gray-600 font-medium">Email</span>
+                  <span className="text-gray-900 font-semibold">{healthCard.patientEmail}</span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-gray-600 font-medium">Phone</span>
+                  <span className="text-gray-900 font-semibold">{healthCard.patientPhone || 'Not provided'}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-blue-100 text-sm">Patient Name</p>
-                <p className="font-medium">{healthCard.patientName}</p>
+            {/* Medical Information */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Medical Information</h3>
               </div>
-              <div>
-                <p className="text-blue-100 text-sm">Blood Type</p>
-                <p className="font-medium">{healthCard.bloodType || 'N/A'}</p>
-              </div>
-            </div>
+              
+              <div className="space-y-4">
+                {healthCard.allergies && healthCard.allergies.length > 0 ? (
+                  <div>
+                    <p className="text-gray-600 font-medium mb-3">Allergies</p>
+                    <div className="flex flex-wrap gap-2">
+                      {healthCard.allergies.map((allergy, index) => (
+                        <span key={index} className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-red-50 text-red-700 border border-red-200">
+                          <AlertTriangle className="h-3 w-3 mr-1.5" />
+                          {allergy}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No allergies recorded</p>
+                )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-blue-100 text-sm">Issue Date</p>
-                <p className="font-medium">{formatDate(healthCard.issueDate)}</p>
-              </div>
-              <div>
-                <p className="text-blue-100 text-sm">Expiry Date</p>
-                <p className="font-medium">{formatDate(healthCard.expiryDate)}</p>
+                {healthCard.emergencyContact && healthCard.emergencyContact.name && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <p className="text-gray-600 font-medium mb-3">Emergency Contact</p>
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center space-x-3">
+                        <User className="h-4 w-4 text-gray-400" />
+                        <span className="font-medium">{healthCard.emergencyContact.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <span>{healthCard.emergencyContact.phone}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="capitalize">{healthCard.emergencyContact.relationship}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-center py-12">
-            <CreditCard className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Health Card</h3>
-            <p className="text-gray-500 mb-4">
-              You don't have a health card yet. Request one to get started.
+        /* No Card State - Enhanced */
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-3xl shadow-xl p-12 text-center border border-gray-100">
+            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <CreditCard className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">No Health Card Found</h3>
+            <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+              You don't have an active health card. Request one to access your digital medical identity and emergency information.
             </p>
             {!request || request.status === 'rejected' ? (
-              <button onClick={() => setShowRequestModal(true)} className="btn btn-primary">
-                <Plus className="h-4 w-4 mr-2" />
+              <button 
+                onClick={() => setShowRequestModal(true)} 
+                className="btn btn-primary btn-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200"
+              >
+                <Plus className="h-5 w-5 mr-2" />
                 Request Health Card
               </button>
             ) : null}
@@ -215,134 +339,113 @@ const PatientHealthCard = () => {
         </div>
       )}
 
-      {/* Health Card Details */}
-      {healthCard && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Card Details</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Contact Information</h3>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <p className="text-sm"><strong>Email:</strong> {healthCard.patientEmail}</p>
-                <p className="text-sm"><strong>Phone:</strong> {healthCard.patientPhone || 'N/A'}</p>
-              </div>
-            </div>
-
-            {healthCard.allergies && healthCard.allergies.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Allergies</h3>
-                <div className="flex flex-wrap gap-2">
-                  {healthCard.allergies.map((allergy, index) => (
-                    <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      {allergy}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {healthCard.emergencyContact && healthCard.emergencyContact.name && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Emergency Contact</h3>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <p className="text-sm"><strong>Name:</strong> {healthCard.emergencyContact.name}</p>
-                  <p className="text-sm"><strong>Phone:</strong> {healthCard.emergencyContact.phone}</p>
-                  <p className="text-sm"><strong>Relationship:</strong> {healthCard.emergencyContact.relationship}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Request Status */}
+      {/* Request Status - Enhanced */}
       {request && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Request Status</h2>
-          
-          <div className="flex items-start space-x-4">
-            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
-              request.status === 'pending' ? 'bg-yellow-100' :
-              request.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
-            }`}>
-              {request.status === 'pending' && <Clock className="h-5 w-5 text-yellow-600" />}
-              {request.status === 'approved' && <CheckCircle className="h-5 w-5 text-green-600" />}
-              {request.status === 'rejected' && <X className="h-5 w-5 text-red-600" />}
-            </div>
-            
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <h3 className="font-medium text-gray-900">Health Card Request</h3>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRequestStatusColor(request.status)}`}>
-                  {request.status.toUpperCase()}
-                </span>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+            <div className="flex items-start space-x-6">
+              <div className={`flex-shrink-0 h-16 w-16 rounded-2xl flex items-center justify-center ${
+                request.status === 'pending' ? 'bg-yellow-100 border border-yellow-200' :
+                request.status === 'approved' ? 'bg-green-100 border border-green-200' : 
+                'bg-red-100 border border-red-200'
+              }`}>
+                {getRequestStatusIcon(request.status)}
               </div>
               
-              <p className="text-sm text-gray-600 mb-2">
-                Submitted on {formatDate(request.createdAt)}
-              </p>
-
-              {request.status === 'pending' && (
-                <p className="text-sm text-gray-600">
-                  Your request is being reviewed by the admin. You will be notified once it's processed.
-                </p>
-              )}
-
-              {request.status === 'approved' && (
-                <p className="text-sm text-green-600">
-                  Your request has been approved! Your health card has been issued.
-                </p>
-              )}
-
-              {request.status === 'rejected' && (
-                <div>
-                  <p className="text-sm text-red-600 mb-2">
-                    Your request was rejected.
-                  </p>
-                  {request.rejectionReason && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="text-sm text-red-800">
-                        <strong>Reason:</strong> {request.rejectionReason}
-                      </p>
-                    </div>
-                  )}
-                  <button 
-                    onClick={() => setShowRequestModal(true)} 
-                    className="btn btn-primary btn-sm mt-3"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Submit New Request
-                  </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2 sm:mb-0">Request Status</h3>
+                  <span className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-semibold ${
+                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    request.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {getRequestStatusIcon(request.status)}
+                    <span>{request.status.toUpperCase()}</span>
+                  </span>
                 </div>
-              )}
+                
+                <p className="text-gray-600 mb-4 text-lg">
+                  Submitted on <span className="font-semibold text-gray-900">{formatDate(request.createdAt)}</span>
+                </p>
+
+                {request.status === 'pending' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <p className="text-yellow-800 font-medium">
+                      Your request is being reviewed by our administration team. You will receive a notification once processed.
+                    </p>
+                  </div>
+                )}
+
+                {request.status === 'approved' && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <p className="text-green-800 font-medium text-lg">
+                      🎉 Your request has been approved! Your health card is now active and ready to use.
+                    </p>
+                  </div>
+                )}
+
+                {request.status === 'rejected' && (
+                  <div className="space-y-4">
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                      <p className="text-red-800 font-medium text-lg mb-3">
+                        Your request was not approved at this time.
+                      </p>
+                      {request.rejectionReason && (
+                        <div className="bg-white rounded-lg p-3 border border-red-300">
+                          <p className="text-red-700">
+                            <strong className="font-semibold">Reason:</strong> {request.rejectionReason}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => setShowRequestModal(true)} 
+                      className="btn btn-primary bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Submit New Request
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Request Health Card Modal */}
+      {/* Enhanced Request Modal */}
       {showRequestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-semibold text-gray-900">Request Health Card</h2>
-              <button onClick={() => { setShowRequestModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform animate-scale-in">
+            <div className="flex justify-between items-center p-8 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl z-10">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-xl">
+                  <Plus className="h-6 w-6 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Request Health Card</h2>
+              </div>
+              <button 
+                onClick={() => { setShowRequestModal(false); resetForm(); }} 
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors duration-200"
+              >
+                <X className="h-6 w-6 text-gray-500" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-8 space-y-8">
               {/* Blood Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Blood Type</label>
+                <label className="block text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-3">
+                  <Heart className="h-5 w-5 text-red-500" />
+                  <span>Blood Type</span>
+                </label>
                 <select
                   value={formData.bloodType}
                   onChange={(e) => handleInputChange(null, 'bloodType', e.target.value)}
-                  className="form-select"
+                  className="form-select-lg w-full"
                 >
-                  <option value="">Select blood type...</option>
+                  <option value="">Select your blood type...</option>
                   <option value="A+">A+</option>
                   <option value="A-">A-</option>
                   <option value="B+">B+</option>
@@ -356,72 +459,90 @@ const PatientHealthCard = () => {
 
               {/* Allergies */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Allergies (comma-separated)</label>
+                <label className="block text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  <span>Allergies</span>
+                </label>
                 <input
                   type="text"
                   value={formData.allergies}
                   onChange={(e) => handleInputChange(null, 'allergies', e.target.value)}
-                  placeholder="Penicillin, Peanuts, Latex"
-                  className="form-input"
+                  placeholder="Penicillin, Peanuts, Latex, etc."
+                  className="form-input-lg w-full"
                 />
-                <p className="text-xs text-gray-500 mt-1">Leave blank if you have no known allergies</p>
+                <p className="text-sm text-gray-500 mt-3">
+                  Enter known allergies separated by commas. Leave blank if you have no known allergies.
+                </p>
               </div>
 
               {/* Emergency Contact */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Emergency Contact</h3>
-                <div className="space-y-3">
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center space-x-3">
+                  <User className="h-5 w-5 text-blue-500" />
+                  <span>Emergency Contact</span>
+                </h3>
+                <div className="space-y-4">
                   <input
                     type="text"
                     value={formData.emergencyContact.name}
                     onChange={(e) => handleInputChange('emergencyContact', 'name', e.target.value)}
-                    placeholder="Contact Name"
-                    className="form-input"
+                    placeholder="Full name of emergency contact"
+                    className="form-input-lg w-full"
                   />
                   <input
                     type="tel"
                     value={formData.emergencyContact.phone}
                     onChange={(e) => handleInputChange('emergencyContact', 'phone', e.target.value)}
-                    placeholder="Contact Phone"
-                    className="form-input"
+                    placeholder="Phone number with country code"
+                    className="form-input-lg w-full"
                   />
                   <input
                     type="text"
                     value={formData.emergencyContact.relationship}
                     onChange={(e) => handleInputChange('emergencyContact', 'relationship', e.target.value)}
-                    placeholder="Relationship (e.g., Spouse, Parent)"
-                    className="form-input"
+                    placeholder="Relationship (e.g., Spouse, Parent, Sibling)"
+                    className="form-input-lg w-full"
                   />
                 </div>
               </div>
 
               {/* Info Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                <div className="flex items-start space-x-4">
+                  <AlertTriangle className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-blue-900">Request Review</p>
-                    <p className="text-sm text-blue-700">
-                      Your request will be reviewed by an administrator. You'll be notified once it's approved or rejected.
+                    <p className="text-lg font-semibold text-blue-900 mb-2">Important Information</p>
+                    <p className="text-blue-800">
+                      Your health card request will be carefully reviewed by our medical administration team. 
+                      This process typically takes 1-2 business days. You'll be notified via email once your 
+                      request is processed.
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <button type="button" onClick={() => { setShowRequestModal(false); resetForm(); }} className="btn btn-outline">
+              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowRequestModal(false); resetForm(); }} 
+                  className="btn btn-outline btn-lg px-8"
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={createRequestMutation.isLoading} className="btn btn-primary">
+                <button 
+                  type="submit" 
+                  disabled={createRequestMutation.isLoading} 
+                  className="btn btn-primary btn-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-8 transform hover:scale-105 transition-all duration-200"
+                >
                   {createRequestMutation.isLoading ? (
                     <>
                       <LoadingSpinner />
-                      <span className="ml-2">Submitting...</span>
+                      <span className="ml-3">Submitting...</span>
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-5 w-5 mr-3" />
                       Submit Request
                     </>
                   )}

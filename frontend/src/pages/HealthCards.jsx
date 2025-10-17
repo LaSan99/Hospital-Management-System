@@ -36,6 +36,8 @@ const HealthCards = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
+  const [showCardDetailsModal, setShowCardDetailsModal] = useState(false)
+  const [selectedCard, setSelectedCard] = useState(null)
   const [selectedRequest, setSelectedRequest] = useState(null)
   const [expiryDate, setExpiryDate] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
@@ -129,6 +131,111 @@ const HealthCards = () => {
     }
   )
 
+  // Block/Unblock card mutation
+  const toggleCardStatusMutation = useMutation(
+    ({ cardId, status }) => {
+      if (status === 'blocked') {
+        return healthCardsAPI.block(cardId, 'Blocked by admin')
+      } else {
+        return healthCardsAPI.unblock(cardId)
+      }
+    },
+    {
+      onMutate: async ({ cardId, status }) => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries('health-cards')
+        
+        // Snapshot the previous value
+        const previousCards = queryClient.getQueryData('health-cards')
+        
+        // Optimistically update the cache
+        queryClient.setQueryData('health-cards', (old) => {
+          if (!old) return old
+          
+          const updateCard = (cards) => {
+            return cards.map(card => 
+              card._id === cardId 
+                ? { ...card, status }
+                : card
+            )
+          }
+          
+          // Handle different response structures
+          if (old.data?.data?.healthCards) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                data: {
+                  ...old.data.data,
+                  healthCards: updateCard(old.data.data.healthCards)
+                }
+              }
+            }
+          } else if (old.data?.healthCards) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                healthCards: updateCard(old.data.healthCards)
+              }
+            }
+          }
+          
+          return old
+        })
+        
+        // Update selected card if it's the one being modified
+        if (selectedCard && selectedCard._id === cardId) {
+          setSelectedCard(prev => ({
+            ...prev,
+            status
+          }))
+        }
+        
+        return { previousCards }
+      },
+      onSuccess: async (response, variables) => {
+        console.log('Health card status update successful:', response.data)
+        const action = variables.status === 'blocked' ? 'blocked' : 'unblocked'
+        toast.success(`Health card ${action} successfully`)
+        
+        // Force a refetch to ensure we have the latest data from server
+        await queryClient.invalidateQueries('health-cards')
+        
+        // Also refetch the data immediately
+        await queryClient.refetchQueries('health-cards')
+      },
+      onError: (error, variables, context) => {
+        console.error('Health card status update failed:', error)
+        
+        // Revert the optimistic update on error
+        if (context?.previousCards) {
+          queryClient.setQueryData('health-cards', context.previousCards)
+        }
+        
+        // Revert selected card status
+        if (selectedCard && selectedCard._id === variables.cardId) {
+          setSelectedCard(prev => ({
+            ...prev,
+            status: prev.status === 'blocked' ? 'active' : 'blocked'
+          }))
+        }
+        
+        toast.error(error.response?.data?.message || 'Failed to update card status')
+      },
+      onSettled: () => {
+        // Always refetch after error or success to ensure consistency
+        queryClient.invalidateQueries('health-cards')
+        
+        // Also refetch the specific card if we have it selected
+        if (selectedCard) {
+          queryClient.invalidateQueries(['health-cards', selectedCard._id])
+        }
+      }
+    }
+  )
+
   const healthCards = healthCardsData?.data?.data?.healthCards || 
                       healthCardsData?.data?.healthCards || 
                       []
@@ -208,6 +315,21 @@ const HealthCards = () => {
       return
     }
     approveRequestMutation.mutate({ id: selectedRequest._id, expiryDate })
+  }
+
+  const handleViewCardDetails = (card) => {
+    setSelectedCard(card)
+    setShowCardDetailsModal(true)
+  }
+
+  const handleToggleCardStatus = (card) => {
+    const newStatus = card.status === 'blocked' ? 'active' : 'blocked'
+    const action = newStatus === 'blocked' ? 'block' : 'unblock'
+    const patientName = card.patientName || 'this patient'
+    
+    if (window.confirm(`Are you sure you want to ${action} the health card for ${patientName}?`)) {
+      toggleCardStatusMutation.mutate({ cardId: card._id, status: newStatus })
+    }
   }
 
   const getStatusIcon = (status) => {
@@ -505,121 +627,110 @@ const HealthCards = () => {
   )
 
   const EnhancedHealthCard = ({ card }) => (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group">
-      {/* Card Header with Status */}
-      <div className={`h-2 ${card.status === 'active' ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 
-                              card.status === 'expired' ? 'bg-gradient-to-r from-red-400 to-rose-500' : 
-                              'bg-gradient-to-r from-yellow-400 to-orange-500'}`}></div>
-      
-      <div className="p-6">
-        {/* Card Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow ${
-              card.status === 'active' ? 'bg-gradient-to-br from-green-100 to-emerald-100' : 
-              card.status === 'expired' ? 'bg-gradient-to-br from-red-100 to-rose-100' : 
-              'bg-gradient-to-br from-yellow-100 to-orange-100'
-            }`}>
-              {getStatusIcon(card.status)}
-            </div>
+    <div className="relative group cursor-pointer" onClick={() => handleViewCardDetails(card)}>
+      {/* Bank Card Style Design */}
+      <div className={`relative w-full h-48 rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-500 hover:scale-105 hover:shadow-3xl ${
+        card.status === 'active' 
+          ? 'bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800' 
+          : card.status === 'expired' 
+          ? 'bg-gradient-to-br from-red-500 via-red-600 to-red-700'
+          : 'bg-gradient-to-br from-yellow-500 via-yellow-600 to-orange-600'
+      }`}>
+        
+        {/* Card Pattern Overlay */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
+          <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-8 -translate-y-8"></div>
+        </div>
+
+        {/* Card Content */}
+        <div className="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+          {/* Top Section */}
+          <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                {card.cardNumber}
-              </h3>
-              <div className="flex items-center space-x-2 mt-1">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(card.status)}`}>
-                  {card.status}
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <CreditCard className="h-5 w-5" />
+                </div>
+                <span className="text-sm font-medium opacity-90">HEALTH CARD</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                  card.status === 'active' ? 'bg-green-500/30 text-green-100' :
+                  card.status === 'expired' ? 'bg-red-500/30 text-red-100' :
+                  'bg-yellow-500/30 text-yellow-100'
+                }`}>
+                  {card.status.toUpperCase()}
                 </span>
                 {isExpiringSoon(card.expiryDate) && !isExpired(card.expiryDate) && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
-                    Expiring Soon
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-orange-500/30 text-orange-100">
+                    EXPIRING SOON
                   </span>
                 )}
               </div>
             </div>
+            <div className="text-right">
+              <div className="w-12 h-8 bg-white/20 rounded flex items-center justify-center">
+                <QrCode className="h-4 w-4" />
+              </div>
+            </div>
           </div>
-          <button className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors group-hover:bg-blue-100 group-hover:text-blue-600">
-            <QrCode className="h-5 w-5" />
-          </button>
+
+          {/* Middle Section - Card Number */}
+          <div className="text-center">
+            <div className="text-2xl font-bold tracking-wider mb-2">
+              {card.cardNumber || 'HC-' + card._id.slice(-8).toUpperCase()}
+            </div>
+            <div className="text-sm opacity-80">Digital Health Card</div>
+          </div>
+
+          {/* Bottom Section */}
+          <div className="flex justify-between items-end">
+            <div>
+              <div className="text-xs opacity-70 mb-1">PATIENT NAME</div>
+              <div className="text-sm font-semibold truncate max-w-32">
+                {card.patientName || 'Unknown Patient'}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs opacity-70 mb-1">EXPIRES</div>
+              <div className="text-sm font-semibold">
+                {new Date(card.expiryDate).toLocaleDateString('en-US', { 
+                  month: '2-digit', 
+                  year: '2-digit' 
+                })}
+              </div>
+            </div>
+          </div>
         </div>
-        
-        {/* Patient Information */}
-        <div className="space-y-3 mb-6">
-          <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-            <User className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
-            <span className="font-semibold">{card.patientName}</span>
+
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+            <span className="text-white font-semibold text-sm">Click to view details</span>
           </div>
-          {card.patientEmail && (
-            <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-              <span className="mr-3 text-gray-400">✉️</span>
-              <span className="truncate">{card.patientEmail}</span>
-            </div>
-          )}
-          {card.bloodType && (
-            <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-              <HeartPulse className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
-              <span>Blood Type: {card.bloodType}</span>
-            </div>
-          )}
-          <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-            <Calendar className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
+        </div>
+      </div>
+
+      {/* Card Info Below */}
+      <div className="mt-4 p-4 bg-white rounded-xl shadow-lg border border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-gray-900 truncate">{card.patientName}</h3>
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(card.status)}`}>
+            {card.status}
+          </span>
+        </div>
+        <div className="text-sm text-gray-600 space-y-1">
+          <div className="flex items-center">
+            <Calendar className="h-3 w-3 mr-2 text-gray-400" />
             <span>Expires: {formatDate(card.expiryDate)}</span>
           </div>
-          <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-            <Calendar className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
-            <span>Issued: {formatDate(card.issueDate)}</span>
-          </div>
-        </div>
-
-        {/* Allergies */}
-        {card.allergies && card.allergies.length > 0 && (
-          <div className="mb-6">
-            <p className="text-sm font-semibold text-gray-700 mb-2">Allergies:</p>
-            <div className="flex flex-wrap gap-2">
-              {card.allergies.slice(0, 3).map((allergy, index) => (
-                <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                  {allergy}
-                </span>
-              ))}
-              {card.allergies.length > 3 && (
-                <span className="text-xs text-gray-500">
-                  +{card.allergies.length - 3} more
-                </span>
-              )}
+          {card.bloodType && (
+            <div className="flex items-center">
+              <HeartPulse className="h-3 w-3 mr-2 text-gray-400" />
+              <span>Blood Type: {card.bloodType}</span>
             </div>
-          </div>
-        )}
-
-        {/* Emergency Contact */}
-        {card.emergencyContact && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-            <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-              <Shield className="h-4 w-4 mr-2 text-blue-600" />
-              Emergency Contact:
-            </p>
-            <p className="text-sm text-gray-600 font-medium">{card.emergencyContact.name}</p>
-            <p className="text-sm text-gray-600">{card.emergencyContact.phone}</p>
-            <p className="text-sm text-gray-600">{card.emergencyContact.relationship}</p>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex space-x-3">
-          <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn">
-            <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-            View Details
-          </button>
-          {card.status === 'active' && (
-            <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center">
-              <Shield className="h-4 w-4 mr-2" />
-              Block
-            </button>
-          )}
-          {card.status === 'blocked' && (
-            <button className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Unblock
-            </button>
           )}
         </div>
       </div>
@@ -878,6 +989,299 @@ const HealthCards = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Card Details Modal */}
+          {showCardDetailsModal && selectedCard && (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden border border-gray-200">
+                {/* Enhanced Header */}
+                <div className={`px-8 py-6 text-white relative overflow-hidden ${
+                  selectedCard.status === 'active' 
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700' 
+                    : selectedCard.status === 'expired' 
+                    ? 'bg-gradient-to-r from-red-500 to-red-600'
+                    : 'bg-gradient-to-r from-yellow-500 to-orange-600'
+                }`}>
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-white rounded-full"></div>
+                    <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white rounded-full"></div>
+                  </div>
+                  <div className="relative z-10 flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="bg-white/20 p-3 rounded-2xl mr-4 backdrop-blur-sm">
+                        <CreditCard className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold">Health Card Details</h2>
+                        <p className="text-white/80 mt-1">Complete information and management</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => { setShowCardDetailsModal(false); setSelectedCard(null); }} 
+                      className="text-white/80 hover:text-white p-3 rounded-xl hover:bg-white/20 transition-all duration-300 backdrop-blur-sm"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="max-h-[calc(95vh-120px)] overflow-y-auto">
+                  <div className="p-8 space-y-8">
+                    {/* Card Preview Section */}
+                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-gray-600 p-2 rounded-xl mr-3">
+                          <Eye className="h-5 w-5 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Card Preview</h3>
+                      </div>
+                      
+                      {/* Bank Card Style Preview */}
+                      <div className={`relative w-full h-48 rounded-2xl shadow-2xl overflow-hidden ${
+                        selectedCard.status === 'active' 
+                          ? 'bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800' 
+                          : selectedCard.status === 'expired' 
+                          ? 'bg-gradient-to-br from-red-500 via-red-600 to-red-700'
+                          : 'bg-gradient-to-br from-yellow-500 via-yellow-600 to-orange-600'
+                      }`}>
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+                          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
+                        </div>
+                        <div className="relative z-10 p-6 h-full flex flex-col justify-between text-white">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center space-x-2 mb-2">
+                                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                                  <CreditCard className="h-5 w-5" />
+                                </div>
+                                <span className="text-sm font-medium opacity-90">HEALTH CARD</span>
+                              </div>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                                selectedCard.status === 'active' ? 'bg-green-500/30 text-green-100' :
+                                selectedCard.status === 'expired' ? 'bg-red-500/30 text-red-100' :
+                                'bg-yellow-500/30 text-yellow-100'
+                              }`}>
+                                {selectedCard.status.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="w-12 h-8 bg-white/20 rounded flex items-center justify-center">
+                              <QrCode className="h-4 w-4" />
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold tracking-wider mb-2">
+                              {selectedCard.cardNumber || 'HC-' + selectedCard._id.slice(-8).toUpperCase()}
+                            </div>
+                            <div className="text-sm opacity-80">Digital Health Card</div>
+                          </div>
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <div className="text-xs opacity-70 mb-1">PATIENT NAME</div>
+                              <div className="text-sm font-semibold">
+                                {selectedCard.patientName || 'Unknown Patient'}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs opacity-70 mb-1">EXPIRES</div>
+                              <div className="text-sm font-semibold">
+                                {new Date(selectedCard.expiryDate).toLocaleDateString('en-US', { 
+                                  month: '2-digit', 
+                                  year: '2-digit' 
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Patient Information Section */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-blue-600 p-2 rounded-xl mr-3">
+                          <User className="h-5 w-5 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Patient Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Patient Name</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="font-semibold text-gray-900">{selectedCard.patientName}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="text-gray-900">{selectedCard.patientEmail || 'Not provided'}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Card Number</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="font-mono font-semibold text-gray-900">
+                              {selectedCard.cardNumber || 'HC-' + selectedCard._id.slice(-8).toUpperCase()}
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(selectedCard.status)}`}>
+                              {selectedCard.status.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Medical Information Section */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-green-600 p-2 rounded-xl mr-3">
+                          <HeartPulse className="h-5 w-5 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Medical Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Blood Type</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="text-gray-900">{selectedCard.bloodType || 'Not specified'}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Issue Date</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="text-gray-900">{formatDate(selectedCard.issueDate)}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry Date</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="text-gray-900">{formatDate(selectedCard.expiryDate)}</p>
+                            {isExpiringSoon(selectedCard.expiryDate) && !isExpired(selectedCard.expiryDate) && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 mt-2">
+                                Expiring Soon
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Days Until Expiry</label>
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
+                            <p className="text-gray-900">
+                              {isExpired(selectedCard.expiryDate) 
+                                ? 'Expired' 
+                                : Math.ceil((new Date(selectedCard.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) + ' days'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Allergies Section */}
+                    {selectedCard.allergies && selectedCard.allergies.length > 0 && (
+                      <div className="bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl p-6 border border-red-200">
+                        <div className="flex items-center mb-4">
+                          <div className="bg-red-600 p-2 rounded-xl mr-3">
+                            <AlertTriangle className="h-5 w-5 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900">Known Allergies</h3>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-200">
+                          <div className="flex flex-wrap gap-2">
+                            {selectedCard.allergies.map((allergy, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
+                                {allergy}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Emergency Contact Section */}
+                    {selectedCard.emergencyContact && selectedCard.emergencyContact.name && (
+                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200">
+                        <div className="flex items-center mb-4">
+                          <div className="bg-purple-600 p-2 rounded-xl mr-3">
+                            <Shield className="h-5 w-5 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900">Emergency Contact</h3>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-200">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">Contact Name</label>
+                              <p className="text-gray-900">{selectedCard.emergencyContact.name}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                              <p className="text-gray-900">{selectedCard.emergencyContact.phone}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">Relationship</label>
+                              <p className="text-gray-900">{selectedCard.emergencyContact.relationship}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                      <button 
+                        onClick={() => { setShowCardDetailsModal(false); setSelectedCard(null); }} 
+                        className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
+                      >
+                        Close
+                      </button>
+                      <button 
+                        onClick={() => handleToggleCardStatus(selectedCard)}
+                        disabled={toggleCardStatusMutation.isLoading || selectedCard.status === 'expired'}
+                        className={`px-6 py-3 rounded-xl font-semibold transition-colors flex items-center ${
+                          selectedCard.status === 'blocked'
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : selectedCard.status === 'expired'
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700 text-white'
+                        }`}
+                      >
+                        {toggleCardStatusMutation.isLoading ? (
+                          <>
+                            <LoadingSpinner />
+                            <span className="ml-2">Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            {selectedCard.status === 'blocked' ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Unblock Card
+                              </>
+                            ) : selectedCard.status === 'expired' ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cannot Block Expired Card
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Block Card
+                              </>
+                            )}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

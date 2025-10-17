@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useQuery } from 'react-query'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
   Calendar, 
@@ -42,6 +43,7 @@ import { appointmentsAPI, doctorsAPI, healthCardsAPI } from '../services/api'
 
 const PatientHome = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [currentSlide, setCurrentSlide] = useState(0)
 
   // Image slides data
@@ -402,7 +404,10 @@ const PatientHome = () => {
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-gray-900">Today's Appointments</h2>
-                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  <button 
+                    onClick={() => navigate('/appointments')}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
                     View All
                   </button>
                 </div>
@@ -441,7 +446,10 @@ const PatientHome = () => {
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments today</h3>
                     <p className="text-gray-500 mb-4">You're all caught up!</p>
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+                    <button 
+                      onClick={() => navigate('/book-appointment')}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+                    >
                       Book Appointment
                     </button>
                   </div>
@@ -523,11 +531,17 @@ const PatientHome = () => {
                     </div>
 
                     <div className="flex space-x-3">
-                      <button className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 flex items-center justify-center">
+                      <button 
+                        onClick={() => navigate('/health-cards')}
+                        className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-200 flex items-center justify-center"
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Download
                       </button>
-                      <button className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 flex items-center justify-center">
+                      <button 
+                        onClick={() => navigate('/health-cards')}
+                        className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 flex items-center justify-center"
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </button>
