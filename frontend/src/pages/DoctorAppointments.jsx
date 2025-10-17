@@ -28,7 +28,8 @@ import {
   Phone,
   Mail,
   Trash2,
-  Sparkles
+  Sparkles,
+  Edit3
 } from 'lucide-react'
 import { appointmentsAPI, medicalRecordsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
