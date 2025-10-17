@@ -133,17 +133,105 @@ const HealthCards = () => {
 
   // Block/Unblock card mutation
   const toggleCardStatusMutation = useMutation(
-    ({ cardId, status }) => healthCardsAPI.update(cardId, { status }),
+    ({ cardId, status }) => {
+      if (status === 'blocked') {
+        return healthCardsAPI.block(cardId, 'Blocked by admin')
+      } else {
+        return healthCardsAPI.unblock(cardId)
+      }
+    },
     {
-      onSuccess: (response) => {
-        queryClient.invalidateQueries('health-cards')
-        const action = selectedCard?.status === 'blocked' ? 'unblocked' : 'blocked'
-        toast.success(`Health card ${action} successfully`)
-        setShowCardDetailsModal(false)
-        setSelectedCard(null)
+      onMutate: async ({ cardId, status }) => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries('health-cards')
+        
+        // Snapshot the previous value
+        const previousCards = queryClient.getQueryData('health-cards')
+        
+        // Optimistically update the cache
+        queryClient.setQueryData('health-cards', (old) => {
+          if (!old) return old
+          
+          const updateCard = (cards) => {
+            return cards.map(card => 
+              card._id === cardId 
+                ? { ...card, status }
+                : card
+            )
+          }
+          
+          // Handle different response structures
+          if (old.data?.data?.healthCards) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                data: {
+                  ...old.data.data,
+                  healthCards: updateCard(old.data.data.healthCards)
+                }
+              }
+            }
+          } else if (old.data?.healthCards) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                healthCards: updateCard(old.data.healthCards)
+              }
+            }
+          }
+          
+          return old
+        })
+        
+        // Update selected card if it's the one being modified
+        if (selectedCard && selectedCard._id === cardId) {
+          setSelectedCard(prev => ({
+            ...prev,
+            status
+          }))
+        }
+        
+        return { previousCards }
       },
-      onError: (error) => {
+      onSuccess: async (response, variables) => {
+        console.log('Health card status update successful:', response.data)
+        const action = variables.status === 'blocked' ? 'blocked' : 'unblocked'
+        toast.success(`Health card ${action} successfully`)
+        
+        // Force a refetch to ensure we have the latest data from server
+        await queryClient.invalidateQueries('health-cards')
+        
+        // Also refetch the data immediately
+        await queryClient.refetchQueries('health-cards')
+      },
+      onError: (error, variables, context) => {
+        console.error('Health card status update failed:', error)
+        
+        // Revert the optimistic update on error
+        if (context?.previousCards) {
+          queryClient.setQueryData('health-cards', context.previousCards)
+        }
+        
+        // Revert selected card status
+        if (selectedCard && selectedCard._id === variables.cardId) {
+          setSelectedCard(prev => ({
+            ...prev,
+            status: prev.status === 'blocked' ? 'active' : 'blocked'
+          }))
+        }
+        
         toast.error(error.response?.data?.message || 'Failed to update card status')
+      },
+      onSettled: () => {
+        // Always refetch after error or success to ensure consistency
+        queryClient.invalidateQueries('health-cards')
+        
+        // Also refetch the specific card if we have it selected
+        if (selectedCard) {
+          queryClient.invalidateQueries(['health-cards', selectedCard._id])
+        }
       }
     }
   )
@@ -237,8 +325,9 @@ const HealthCards = () => {
   const handleToggleCardStatus = (card) => {
     const newStatus = card.status === 'blocked' ? 'active' : 'blocked'
     const action = newStatus === 'blocked' ? 'block' : 'unblock'
+    const patientName = card.patientName || 'this patient'
     
-    if (window.confirm(`Are you sure you want to ${action} this health card?`)) {
+    if (window.confirm(`Are you sure you want to ${action} the health card for ${patientName}?`)) {
       toggleCardStatusMutation.mutate({ cardId: card._id, status: newStatus })
     }
   }
@@ -1155,10 +1244,12 @@ const HealthCards = () => {
                       </button>
                       <button 
                         onClick={() => handleToggleCardStatus(selectedCard)}
-                        disabled={toggleCardStatusMutation.isLoading}
+                        disabled={toggleCardStatusMutation.isLoading || selectedCard.status === 'expired'}
                         className={`px-6 py-3 rounded-xl font-semibold transition-colors flex items-center ${
                           selectedCard.status === 'blocked'
                             ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : selectedCard.status === 'expired'
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                             : 'bg-red-600 hover:bg-red-700 text-white'
                         }`}
                       >
@@ -1173,6 +1264,11 @@ const HealthCards = () => {
                               <>
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Unblock Card
+                              </>
+                            ) : selectedCard.status === 'expired' ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cannot Block Expired Card
                               </>
                             ) : (
                               <>
