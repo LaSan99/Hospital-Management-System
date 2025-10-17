@@ -297,15 +297,15 @@ const PatientAppointments = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-1 sm:px-1.5 lg:px-2">
+
+
         {/* Enhanced Header */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div className="flex-1">
               <div className="flex items-center space-x-4 mb-4">
-                <div className="bg-white rounded-2xl p-3 shadow-lg">
-                  <CalendarIcon className="h-8 w-8 text-blue-600" />
-                </div>
+                
                 <div>
                   <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     My Appointments
@@ -355,17 +355,7 @@ const PatientAppointments = () => {
               </div>
             </div>
             
-            <div className="mt-6 lg:mt-0 lg:ml-8">
-              <button 
-                onClick={() => window.location.href = '/doctors'}
-                className="group relative bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <Plus className="h-6 w-6 mr-3 relative z-10" />
-                <span className="relative z-10">Book New Appointment</span>
-                <ArrowRight className="h-5 w-5 ml-2 relative z-10 transform group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
+            
           </div>
         </div>
 
@@ -606,9 +596,9 @@ const PatientAppointments = () => {
                                       onClick={() => window.location.href = `/payment?appointmentId=${appointment._id}`}
                                       className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
                                     >
-                                      <CreditCard className="h-5 w-5 mr-2" />
+                                      
                                       Complete Payment
-                                      <Zap className="h-4 w-4 ml-2 transform group-hover:scale-110 transition-transform" />
+                                     
                                     </button>
                                   )}
                                   
@@ -617,9 +607,9 @@ const PatientAppointments = () => {
                                       onClick={() => handleViewMedicine(medicineRecord)}
                                       className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
                                     >
-                                      <Pill className="h-5 w-5 mr-2" />
+                                      
                                       View Prescription
-                                      <FileText className="h-4 w-4 ml-2 transform group-hover:scale-110 transition-transform" />
+                                     
                                     </button>
                                   )}
                                   
