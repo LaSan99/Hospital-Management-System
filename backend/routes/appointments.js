@@ -325,6 +325,50 @@ router.put('/:id/payment', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete appointment (only for cancelled appointments)
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    // Check permissions - only patient can delete their own cancelled appointments
+    if (appointment.patientId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Only allow deletion of cancelled appointments
+    if (appointment.status !== 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only cancelled appointments can be deleted'
+      });
+    }
+
+    await Appointment.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Appointment deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete appointment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete appointment',
+      error: error.message
+    });
+  }
+});
+
 // Get available time slots for a doctor
 router.get('/availability/:doctorId', async (req, res) => {
   try {

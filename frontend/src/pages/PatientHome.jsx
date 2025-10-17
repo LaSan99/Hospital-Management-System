@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useQuery } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
@@ -37,14 +37,18 @@ import {
   BarChart3,
   Stethoscope,
   Pill,
-  Microscope
+  Microscope,
+  Trash2
 } from 'lucide-react'
 import { appointmentsAPI, doctorsAPI, healthCardsAPI } from '../services/api'
+import toast from 'react-hot-toast'
 
 const PatientHome = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
   // Image slides data
   const slides = [
@@ -113,6 +117,22 @@ const PatientHome = () => {
     }
   )
 
+  // Delete appointment mutation
+  const deleteAppointmentMutation = useMutation(
+    (appointmentId) => appointmentsAPI.delete(appointmentId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('patient-appointments')
+        toast.success('Appointment deleted successfully')
+        setDeleteConfirmId(null)
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to delete appointment')
+        setDeleteConfirmId(null)
+      }
+    }
+  )
+
   const appointments = appointmentsData?.data?.appointments || []
   const doctors = doctorsData?.data?.doctors || []
   const healthCard = healthCardData?.data?.data?.healthCard || 
@@ -123,6 +143,7 @@ const PatientHome = () => {
   const patientAppointments = appointments.filter(apt => 
     apt.patientId._id === user?._id
   )
+
 
   // Get today's appointments
   const today = new Date().toISOString().split('T')[0]
@@ -174,6 +195,20 @@ const PatientHome = () => {
     }
   }
 
+  const handleDeleteAppointment = (appointmentId) => {
+    setDeleteConfirmId(appointmentId)
+  }
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteAppointmentMutation.mutate(deleteConfirmId)
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirmId(null)
+  }
+
   // Medical departments data
   const departments = [
     { name: 'Cardiology', icon: Heart, color: 'red', doctors: 12 },
@@ -222,7 +257,18 @@ const PatientHome = () => {
                   {slide.subtitle}
                 </p>
                 <div className="flex space-x-4">
-                  <button className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center">
+                  <button 
+                    onClick={() => {
+                      if (slide.cta === 'Book Appointment') {
+                        navigate('/book-appointment')
+                      } else if (slide.cta === 'Our Services') {
+                        navigate('/doctors')
+                      } else if (slide.cta === 'Meet Our Doctors') {
+                        navigate('/doctors')
+                      }
+                    }}
+                    className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center"
+                  >
                     {slide.cta}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </button>
@@ -434,6 +480,15 @@ const PatientHome = () => {
                             {getStatusIcon(appointment.status)}
                             <span className="ml-1 capitalize">{appointment.status}</span>
                           </span>
+                          {appointment.status === 'cancelled' && (
+                            <button 
+                              onClick={() => handleDeleteAppointment(appointment._id)}
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              title="Delete appointment"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                           <button className="text-gray-400 hover:text-gray-600">
                             <MoreVertical className="h-4 w-4" />
                           </button>
@@ -569,7 +624,7 @@ const PatientHome = () => {
                           {request.status === 'rejected' && 'Your request was rejected. You can submit a new one.'}
                         </p>
                         <button 
-                          onClick={() => window.location.href = '/health-cards'}
+                          onClick={() => navigate('/health-cards')}
                           className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full"
                         >
                           {request.status === 'rejected' ? 'Request Again' : 'View Status'}
@@ -581,7 +636,7 @@ const PatientHome = () => {
                           Request your digital health card to access medical services.
                         </p>
                         <button 
-                          onClick={() => window.location.href = '/health-cards'}
+                          onClick={() => navigate('/health-cards')}
                           className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full flex items-center justify-center"
                         >
                           <Plus className="h-4 w-4 mr-2" />
@@ -620,6 +675,56 @@ const PatientHome = () => {
             </div>
 
             {/* Quick Actions */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 gap-4">
+                  <button 
+                    onClick={() => navigate('/book-appointment')}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <Calendar className="h-5 w-5 mr-3" />
+                    Book New Appointment
+                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => navigate('/doctors')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Find Doctors
+                    </button>
+                    <button 
+                      onClick={() => navigate('/appointments')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      My Appointments
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => navigate('/medical-records')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Medical Records
+                    </button>
+                    <button 
+                      onClick={() => navigate('/health-cards')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Health Card
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
           </div>
         </div>
@@ -627,6 +732,51 @@ const PatientHome = () => {
         {/* Recent Activity */}
         
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Appointment</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to permanently delete this cancelled appointment? 
+              This action cannot be undone and the appointment will be removed from your records.
+            </p>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteAppointmentMutation.isLoading}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 transition-colors flex items-center justify-center"
+              >
+                {deleteAppointmentMutation.isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Appointment'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
