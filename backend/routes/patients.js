@@ -179,6 +179,45 @@ router.delete('/:id', authenticateToken, authorize('admin'), async (req, res) =>
   }
 });
 
+// Permanent delete patient (admin only)
+router.delete('/:id/permanent', authenticateToken, authorize('admin'), async (req, res) => {
+  try {
+    const patient = await User.findById(req.params.id);
+    
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
+      });
+    }
+
+    if (patient.role !== 'patient') {
+      return res.status(400).json({
+        success: false,
+        message: 'User is not a patient'
+      });
+    }
+
+    // Delete associated health card if exists
+    await HealthCard.deleteOne({ patientId: req.params.id });
+
+    // Permanent delete - remove from database
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Patient permanently deleted successfully'
+    });
+  } catch (error) {
+    console.error('Permanent delete patient error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to permanently delete patient',
+      error: error.message
+    });
+  }
+});
+
 // Get patient's health card
 router.get('/:id/health-card', authenticateToken, canAccessOwnData, async (req, res) => {
   try {

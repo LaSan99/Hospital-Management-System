@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useNavigate } from 'react-router-dom'
 import { 
   Users, 
@@ -19,7 +19,10 @@ import {
   UserCheck,
   TrendingUp,
   Clock,
-  Download
+  Download,
+  Trash2,
+  AlertTriangle,
+  X
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { patientsAPI } from '../services/api'
@@ -27,7 +30,9 @@ import LoadingSpinner from '../components/LoadingSpinner'
 
 const Patients = () => {
   const [searchTerm, setSearchTerm] = useState('')
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, patient: null })
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // Fetch patients data
   const { data: patientsData, isLoading, error } = useQuery(
@@ -45,6 +50,56 @@ const Patients = () => {
   const patients = patientsData?.data?.data?.patients || 
                    patientsData?.data?.patients || 
                    []
+
+  // Deactivate patient mutation (soft delete)
+  const deactivatePatientMutation = useMutation(
+    (patientId) => patientsAPI.delete(patientId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('patients')
+        setDeleteModal({ isOpen: false, patient: null })
+      },
+      onError: (error) => {
+        console.error('Deactivate patient error:', error)
+        alert(error.response?.data?.message || 'Failed to deactivate patient')
+      }
+    }
+  )
+
+  // Permanent delete patient mutation (hard delete)
+  const permanentDeletePatientMutation = useMutation(
+    (patientId) => patientsAPI.permanentDelete(patientId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('patients')
+        setDeleteModal({ isOpen: false, patient: null })
+      },
+      onError: (error) => {
+        console.error('Permanent delete patient error:', error)
+        alert(error.response?.data?.message || 'Failed to permanently delete patient')
+      }
+    }
+  )
+
+  const handleDeletePatient = (patient) => {
+    setDeleteModal({ isOpen: true, patient })
+  }
+
+  const confirmDeactivate = () => {
+    if (deleteModal.patient) {
+      deactivatePatientMutation.mutate(deleteModal.patient._id)
+    }
+  }
+
+  const confirmPermanentDelete = () => {
+    if (deleteModal.patient) {
+      permanentDeletePatientMutation.mutate(deleteModal.patient._id)
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteModal({ isOpen: false, patient: null })
+  }
   
   console.log('Parsed Patients:', patients)
   console.log('Patients Count:', patients.length)
@@ -238,7 +293,20 @@ const Patients = () => {
           navigate={navigate}
           getInitials={getInitials}
           formatDate={formatDate}
+          onDeletePatient={handleDeletePatient}
         />
+
+        {/* Delete Confirmation Modal */}
+        {deleteModal.isOpen && (
+          <DeleteConfirmationModal
+            patient={deleteModal.patient}
+            onDeactivate={confirmDeactivate}
+            onPermanentDelete={confirmPermanentDelete}
+            onCancel={cancelDelete}
+            isDeactivating={deactivatePatientMutation.isLoading}
+            isPermanentDeleting={permanentDeletePatientMutation.isLoading}
+          />
+        )}
 
         <footer className="mt-12 text-center text-gray-500 text-sm py-6 border-t border-gray-200">
           <div className="flex items-center justify-center space-x-6 mb-2">
@@ -481,7 +549,7 @@ const SearchAndFiltersSection = ({ searchTerm, setSearchTerm, navigate }) => {
 }
 
 // Enhanced Patients List Section
-const PatientsListSection = ({ filteredPatients, searchTerm, navigate, getInitials, formatDate }) => {
+const PatientsListSection = ({ filteredPatients, searchTerm, navigate, getInitials, formatDate, onDeletePatient }) => {
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
       {/* Enhanced Header */}
@@ -546,6 +614,7 @@ const PatientsListSection = ({ filteredPatients, searchTerm, navigate, getInitia
                 navigate={navigate}
                 getInitials={getInitials}
                 formatDate={formatDate}
+                onDeletePatient={onDeletePatient}
               />
             ))}
           </div>
@@ -556,7 +625,7 @@ const PatientsListSection = ({ filteredPatients, searchTerm, navigate, getInitia
 }
 
 // Enhanced Patient Card - Grid Layout
-const EnhancedPatientCard = ({ patient, navigate, getInitials, formatDate }) => {
+const EnhancedPatientCard = ({ patient, navigate, getInitials, formatDate, onDeletePatient }) => {
   const getAge = (dateOfBirth) => {
     const today = new Date()
     const birthDate = new Date(dateOfBirth)
@@ -636,8 +705,8 @@ const EnhancedPatientCard = ({ patient, navigate, getInitials, formatDate }) => 
           )}
         </div>
 
-        {/* Action Button */}
-        <div className="flex">
+        {/* Action Buttons */}
+        <div className="flex gap-3">
           <button 
             onClick={() => {
               try {
@@ -647,10 +716,24 @@ const EnhancedPatientCard = ({ patient, navigate, getInitials, formatDate }) => 
                 console.error('Error viewing patient details:', error)
               }
             }}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
+            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
           >
             <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-            View Patient Details
+            View Details
+          </button>
+          <button 
+            onClick={() => {
+              try {
+                console.log('Deleting patient:', patient._id)
+                onDeletePatient(patient)
+              } catch (error) {
+                console.error('Error deleting patient:', error)
+              }
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
+            title="Delete Patient"
+          >
+            <Trash2 className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
           </button>
         </div>
 
@@ -795,6 +878,146 @@ const EmptyStateSection = ({ searchTerm, navigate }) => {
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// Delete Confirmation Modal
+const DeleteConfirmationModal = ({ patient, onDeactivate, onPermanentDelete, onCancel, isDeactivating, isPermanentDeleting }) => {
+  const isProcessing = isDeactivating || isPermanentDeleting
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-red-500 to-rose-600 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                <AlertTriangle className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Delete Patient Account</h3>
+            </div>
+            <button
+              onClick={onCancel}
+              disabled={isProcessing}
+              className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="mb-6">
+            <p className="text-gray-700 mb-4 text-lg font-semibold">
+              Choose how to delete this patient account:
+            </p>
+            
+            {/* Patient Info */}
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                  <span className="text-blue-600 font-bold">
+                    {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">
+                    {patient.firstName} {patient.lastName}
+                  </p>
+                  <p className="text-sm text-gray-600">{patient.email}</p>
+                </div>
+              </div>
+              <div className="text-sm text-gray-600">
+                <p className="flex items-center">
+                  <Phone className="h-3 w-3 mr-2" />
+                  {patient.phone}
+                </p>
+              </div>
+            </div>
+
+            {/* Delete Options */}
+            <div className="space-y-3 mt-4">
+              {/* Deactivate Option */}
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-orange-100 p-2 rounded-lg flex-shrink-0">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-orange-900 font-semibold mb-1">Deactivate Account (Soft Delete)</p>
+                    <p className="text-orange-700 text-sm mb-3">
+                      Temporarily disable the account. Can be reactivated later. Patient data is preserved.
+                    </p>
+                    <button
+                      onClick={onDeactivate}
+                      disabled={isProcessing}
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {isDeactivating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Deactivating...
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="h-4 w-4 mr-2" />
+                          Deactivate Account
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Permanent Delete Option */}
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-red-100 p-2 rounded-lg flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-red-900 font-semibold mb-1">Permanent Delete (Hard Delete)</p>
+                    <p className="text-red-700 text-sm mb-3">
+                      Permanently remove all patient data from the database. This action cannot be undone!
+                    </p>
+                    <button
+                      onClick={onPermanentDelete}
+                      disabled={isProcessing}
+                      className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {isPermanentDeleting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Deleting Permanently...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Permanently
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Cancel Button */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={onCancel}
+              disabled={isProcessing}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
