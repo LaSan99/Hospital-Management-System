@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useNavigate } from 'react-router-dom'
 import { 
   UserCheck, 
   Plus, 
@@ -23,7 +24,14 @@ import {
   TrendingUp,
   Users,
   MoreVertical,
-  BadgeCheck
+  BadgeCheck,
+  Activity,
+  HeartPulse,
+  LineChart,
+  ShieldCheck,
+  Edit,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react'
 import { doctorsAPI } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -32,6 +40,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 const Doctors = () => {
   const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSpecialization, setSelectedSpecialization] = useState('')
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false)
@@ -233,8 +242,8 @@ const Doctors = () => {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Doctors</h3>
             <p className="text-gray-600 mb-4">
-              {error.response?.data?.message || 'Failed to load doctors. Please try again.'}
-            </p>
+            {error.response?.data?.message || 'Failed to load doctors. Please try again.'}
+          </p>
             <button 
               onClick={() => window.location.reload()}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -248,127 +257,66 @@ const Doctors = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Medical Team</h1>
-              <p className="text-gray-600 mt-2">Browse and manage our healthcare professionals</p>
-            </div>
-            {isAdmin && (
-              <button 
-                className="mt-4 lg:mt-0 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-blue-500/25 flex items-center"
-                onClick={() => setShowAddDoctorModal(true)}
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Add New Doctor
-              </button>
-            )}
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
+      <div className="max-w-7xl mx-auto">
+        <WelcomeBanner navigate={navigate} doctors={doctors} specializations={specializations} />
+        
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-6">
+        <div>
+              <h2 className="text-2xl font-bold text-gray-900">Doctor Management</h2>
+              <p className="text-gray-600 mt-1">Comprehensive doctor database and management system</p>
         </div>
-
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Doctors</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{doctors.length}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
+            <div className="flex items-center space-x-3">
+              <span className="text-sm text-gray-500">Total: {doctors.length} doctors</span>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             </div>
           </div>
+      </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Available Today</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {doctors.filter(d => d.isAvailable).length}
-                </p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-xl">
-                <UserCheck className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Specializations</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{specializations.length}</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Award className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg. Experience</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {doctors.length > 0 
-                    ? Math.round(doctors.reduce((acc, doc) => acc + (parseInt(doc.experience) || 0), 0) / doctors.length)
-                    : 0
-                  }+ yrs
-                </p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-xl">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filters */}
+      {/* Search and Filters */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
+          <div className="flex-1">
+            <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
+              <input
+                type="text"
                   placeholder="Search doctors by name, specialization, or email..."
                   className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <select
+          </div>
+          <select
               className="px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-              value={selectedSpecialization}
-              onChange={(e) => setSelectedSpecialization(e.target.value)}
-            >
-              <option value="">All Specializations</option>
-              {specializations.map(spec => (
-                <option key={spec} value={spec}>{spec}</option>
-              ))}
-            </select>
+            value={selectedSpecialization}
+            onChange={(e) => setSelectedSpecialization(e.target.value)}
+          >
+            <option value="">All Specializations</option>
+            {specializations.map(spec => (
+              <option key={spec} value={spec}>{spec}</option>
+            ))}
+          </select>
             <button className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center">
               <Filter className="h-5 w-5 mr-2 text-gray-600" />
-              More Filters
-            </button>
-          </div>
+            More Filters
+          </button>
         </div>
+      </div>
 
-        {/* Results Count */}
+      {/* Results Count */}
         <div className="flex justify-between items-center mb-4">
           <p className="text-gray-600">
             Showing <span className="font-semibold text-gray-900">{filteredDoctors.length}</span> of{' '}
             <span className="font-semibold text-gray-900">{doctors.length}</span> doctors
           </p>
-        </div>
+      </div>
 
-        {/* Doctors Grid */}
-        {filteredDoctors.length === 0 ? (
+      {/* Doctors Grid */}
+      {filteredDoctors.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <UserCheck className="h-10 w-10 text-gray-400" />
@@ -391,117 +339,26 @@ const Doctors = () => {
                 Clear Filters
               </button>
             )}
-          </div>
+        </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredDoctors.map((doctor) => (
-              <div key={doctor._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300">
-                {/* Doctor Header */}
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-semibold text-lg">
-                          {getInitials(doctor.firstName, doctor.lastName)}
-                        </div>
-                        {doctor.isAvailable && (
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Dr. {doctor.firstName} {doctor.lastName}
-                        </h3>
-                        <p className="text-blue-600 font-medium">{doctor.specialization || 'General Practice'}</p>
-                        <div className="flex items-center mt-1">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                          <span className="text-sm text-gray-600 ml-1">4.8 • {formatExperience(doctor.experience)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button className="text-gray-400 hover:text-gray-600 p-1">
-                      <MoreVertical className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Doctor Details */}
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Mail className="h-4 w-4 mr-3 text-gray-400" />
-                    <span className="truncate">{doctor.email}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Phone className="h-4 w-4 mr-3 text-gray-400" />
-                    <span>{doctor.phone || 'Not provided'}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 mr-3 text-gray-400" />
-                    <span className="truncate">
-                      {doctor.address?.city && doctor.address?.state 
-                        ? `${doctor.address.city}, ${doctor.address.state}`
-                        : 'Location not specified'
-                      }
-                    </span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <DollarSign className="h-4 w-4 mr-3 text-gray-400" />
-                    <span>Consultation: ${doctor.consultationFee || 'Not set'}</span>
-                  </div>
-                </div>
-
-                {/* Status and Actions */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        doctor.isAvailable 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {doctor.isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        doctor.isActive 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {doctor.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="View Profile">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      {isAdmin && (
-                        <>
-                          <button className="p-2 text-gray-400 hover:text-green-600 transition-colors" title="Edit">
-                            <Edit3 className="h-4 w-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleToggleAvailability(doctor._id, doctor.isAvailable)}
-                            className={`p-2 transition-colors ${
-                              doctor.isAvailable 
-                                ? 'text-green-600 hover:text-yellow-600' 
-                                : 'text-yellow-600 hover:text-green-600'
-                            }`}
-                            title={doctor.isAvailable ? 'Set Unavailable' : 'Set Available'}
-                            disabled={toggleAvailabilityMutation.isLoading}
-                          >
-                            {doctor.isAvailable ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <EnhancedDoctorCard 
+                key={doctor._id} 
+                doctor={doctor} 
+                navigate={navigate}
+                getInitials={getInitials}
+                formatExperience={formatExperience}
+                isAdmin={isAdmin}
+                handleToggleAvailability={handleToggleAvailability}
+                handleToggleStatus={handleToggleStatus}
+              />
             ))}
           </div>
         )}
 
-        {/* Add Doctor Modal */}
-        {showAddDoctorModal && (
+      {/* Add Doctor Modal */}
+      {showAddDoctorModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
@@ -510,14 +367,14 @@ const Doctors = () => {
                   <h2 className="text-2xl font-bold text-gray-900">Add New Doctor</h2>
                   <p className="text-gray-600 mt-1">Register a new healthcare professional</p>
                 </div>
-                <button
-                  onClick={resetForm}
+              <button
+                onClick={resetForm}
                   className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
               {/* Modal Form */}
               <form onSubmit={handleSubmit} className="p-6 space-y-8">
                 {/* Personal Information */}
@@ -529,34 +386,34 @@ const Doctors = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        First Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={newDoctor.firstName}
-                        onChange={handleInputChange}
-                        required
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={newDoctor.firstName}
+                    onChange={handleInputChange}
+                    required
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="Enter first name"
-                      />
-                    </div>
-                    <div>
+                  />
+                </div>
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Last Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={newDoctor.lastName}
-                        onChange={handleInputChange}
-                        required
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={newDoctor.lastName}
+                    onChange={handleInputChange}
+                    required
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="Enter last name"
-                      />
+                  />
                     </div>
-                  </div>
                 </div>
+              </div>
 
                 {/* Contact Information */}
                 <div>
@@ -568,33 +425,33 @@ const Doctors = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Email Address *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={newDoctor.email}
-                        onChange={handleInputChange}
-                        required
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={newDoctor.email}
+                    onChange={handleInputChange}
+                    required
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="doctor@hospital.com"
-                      />
-                    </div>
-                    <div>
+                  />
+                </div>
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={newDoctor.phone}
-                        onChange={handleInputChange}
-                        required
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={newDoctor.phone}
+                    onChange={handleInputChange}
+                    required
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="+1234567890"
-                      />
-                    </div>
-                  </div>
+                  />
                 </div>
+                </div>
+              </div>
 
                 {/* Professional Details */}
                 <div>
@@ -603,98 +460,555 @@ const Doctors = () => {
                     Professional Details
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Specialization *
-                      </label>
-                      <input
-                        type="text"
-                        name="specialization"
-                        value={newDoctor.specialization}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="e.g., Cardiology, Neurology"
+                    Specialization *
+                  </label>
+                  <input
+                    type="text"
+                    name="specialization"
+                    value={newDoctor.specialization}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., Cardiology, Neurology"
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-                      />
-                    </div>
-                    <div>
+                  />
+                </div>
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        License Number *
-                      </label>
-                      <input
-                        type="text"
-                        name="licenseNumber"
-                        value={newDoctor.licenseNumber}
-                        onChange={handleInputChange}
-                        required
+                    License Number *
+                  </label>
+                  <input
+                    type="text"
+                    name="licenseNumber"
+                    value={newDoctor.licenseNumber}
+                    onChange={handleInputChange}
+                    required
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="Medical license number"
-                      />
-                    </div>
-                    <div>
+                  />
+                </div>
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Experience (years) *
-                      </label>
-                      <input
-                        type="number"
-                        name="experience"
-                        value={newDoctor.experience}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
+                    Experience (years) *
+                  </label>
+                  <input
+                    type="number"
+                    name="experience"
+                    value={newDoctor.experience}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="Years of experience"
-                      />
-                    </div>
-                    <div>
+                  />
+                </div>
+              <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Consultation Fee ($)
-                      </label>
-                      <input
-                        type="number"
-                        name="consultationFee"
-                        value={newDoctor.consultationFee}
-                        onChange={handleInputChange}
-                        min="0"
-                        step="0.01"
+                  Consultation Fee ($)
+                </label>
+                <input
+                  type="number"
+                  name="consultationFee"
+                  value={newDoctor.consultationFee}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="Consultation fee"
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
                 </div>
+              </div>
 
                 {/* Form Actions */}
                 <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={resetForm}
+                <button
+                  type="button"
+                  onClick={resetForm}
                     className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createDoctorMutation.isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createDoctorMutation.isLoading}
                     className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {createDoctorMutation.isLoading ? (
-                      <>
-                        <LoadingSpinner />
+                >
+                  {createDoctorMutation.isLoading ? (
+                    <>
+                      <LoadingSpinner />
                         <span className="ml-2">Creating Doctor...</span>
-                      </>
-                    ) : (
-                      <>
+                    </>
+                  ) : (
+                    <>
                         <Save className="h-5 w-5 mr-2" />
                         Create Doctor Account
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+  )
+}
+
+// Enhanced Welcome Banner
+const WelcomeBanner = ({ navigate, doctors = [], specializations = [] }) => {
+  const availableDoctors = doctors.filter(d => d.isAvailable).length
+  const avgExperience = doctors.length > 0 
+    ? Math.round(doctors.reduce((acc, doc) => acc + (parseInt(doc.experience) || 0), 0) / doctors.length)
+    : 0
+
+  return (
+    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl shadow-xl overflow-hidden">
+      <div className="flex flex-col lg:flex-row">
+        {/* Left content area */}
+        <div className="p-8 lg:p-10 flex-1">
+          <div className="flex items-center mb-6">
+            <div className="bg-white/20 p-3 rounded-2xl mr-4 backdrop-blur-sm">
+              <UserCheck size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-1">
+                Doctor Management System
+              </h1>
+              <p className="text-blue-100 text-lg">
+                Comprehensive doctor database and healthcare management
+              </p>
             </div>
           </div>
+          
+          <p className="text-blue-100/90 mb-8 max-w-2xl text-lg leading-relaxed">
+            Manage doctor profiles, track specializations, and maintain comprehensive 
+            healthcare professional data with our secure, professional doctor management platform.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <HealthMetric
+              icon={<Users size={20} className="text-blue-400" />}
+              label="Total Doctors"
+              value={doctors.length}
+              status="normal"
+            />
+            <HealthMetric
+              icon={<UserCheck size={20} className="text-green-400" />}
+              label="Available Today"
+              value={availableDoctors}
+              status="normal"
+            />
+            <HealthMetric
+              icon={<Award size={20} className="text-purple-400" />}
+              label="Specializations"
+              value={specializations.length}
+              status="normal"
+            />
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={() => {
+                try {
+                  console.log('Navigating to doctor reports')
+                  // navigate('/doctor-reports') // Uncomment when route is available
+                } catch (error) {
+                  console.error('Error navigating to doctor reports:', error)
+                }
+              }}
+              className="bg-white/10 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 backdrop-blur-sm border border-white/20 flex items-center"
+            >
+              <Activity size={18} className="mr-2" />
+              View Reports
+            </button>
+          </div>
+        </div>
+        
+        {/* Right visualization area */}
+        <div className="lg:w-96 bg-white/10 backdrop-blur-sm p-8 flex items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-white rounded-full"></div>
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-white rounded-full"></div>
+          </div>
+          
+          <div className="relative z-10 text-center">
+            <div className="w-32 h-32 mx-auto mb-6 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full animate-pulse"></div>
+              <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
+                <UserCheck size={48} className="text-blue-600" />
+              </div>
+            </div>
+            
+            <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30">
+              <p className="text-white font-semibold text-lg mb-2">System Status</p>
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                <p className="text-blue-100 font-medium">All Systems Operational</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const HealthMetric = ({ icon, label, value, status }) => {
+  const statusColors = {
+    normal: 'text-green-400',
+    warning: 'text-amber-400',
+    alert: 'text-red-400',
+  }
+  
+  return (
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+      <div className="flex items-center mb-2">
+        <div className="bg-white/20 p-2 rounded-lg mr-3">
+          {icon}
+        </div>
+        <span className="text-blue-100 text-sm font-medium">{label}</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-white text-xl font-bold">{value}</span>
+        <span className={`text-xs font-semibold ${statusColors[status]} bg-white/20 px-2 py-1 rounded-full`}>
+          {status === 'normal' ? 'Normal' : status === 'warning' ? 'Warning' : 'Alert'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// Enhanced Search and Filters Section
+const SearchAndFiltersSection = ({ searchTerm, setSearchTerm, selectedSpecialization, setSelectedSpecialization, specializations, navigate, isAdmin, setShowAddDoctorModal }) => {
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 mb-8">
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search doctors by name, specialization, or email..."
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <select
+            className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            value={selectedSpecialization}
+            onChange={(e) => setSelectedSpecialization(e.target.value)}
+          >
+            <option value="">All Specializations</option>
+            {specializations.map(spec => (
+              <option key={spec} value={spec}>{spec}</option>
+            ))}
+          </select>
+          <button className="bg-gray-100 hover:bg-gray-200 px-6 py-3 rounded-xl font-semibold text-gray-700 transition-colors flex items-center">
+            <Filter className="h-5 w-5 mr-2" />
+            Filters
+          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setShowAddDoctorModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Doctor
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Results Count Section
+const ResultsCountSection = ({ filteredDoctors }) => {
+  return (
+    <div className="flex justify-between items-center mb-6">
+      <p className="text-gray-600">
+        Showing <span className="font-semibold text-gray-900">{filteredDoctors.length}</span> doctors
+      </p>
+    </div>
+  )
+}
+
+// Enhanced Doctors Grid Section
+const DoctorsGridSection = ({ filteredDoctors, searchTerm, selectedSpecialization, navigate, getInitials, formatExperience, isAdmin, handleToggleAvailability, handleToggleStatus }) => {
+  return (
+    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+      {/* Enhanced Header */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-8 py-6 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-2xl shadow-lg">
+              <UserCheck className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Doctor Directory
+              </h2>
+              <p className="text-gray-600 text-sm mt-1">
+                {filteredDoctors.length} {filteredDoctors.length === 1 ? 'doctor' : 'doctors'} found
+                {searchTerm && (
+                  <span className="ml-2 text-blue-600 font-medium">
+                    for "{searchTerm}"
+                  </span>
+                )}
+                {selectedSpecialization && (
+                  <span className="ml-2 text-blue-600 font-medium">
+                    in "{selectedSpecialization}"
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-gray-600 font-medium">Live Data</span>
+            </div>
+            <div className="bg-white rounded-xl px-4 py-2 shadow-sm border border-gray-200">
+              <span className="text-blue-600 font-bold text-lg">
+                {filteredDoctors.length}
+              </span>
+              <span className="text-gray-500 text-sm ml-1">total</span>
+            </div>
+            <button 
+              onClick={() => {
+                try {
+                  console.log('Refreshing doctor list')
+                  window.location.reload()
+                } catch (error) {
+                  console.error('Error refreshing doctor list:', error)
+                }
+              }}
+              className="bg-white hover:bg-gray-50 p-3 rounded-xl transition-all duration-200 shadow-sm border border-gray-200 hover:shadow-md"
+              title="Refresh doctor list"
+            >
+              <Activity size={20} className="text-gray-600" />
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {filteredDoctors.length === 0 ? (
+        <EmptyStateSection searchTerm={searchTerm} selectedSpecialization={selectedSpecialization} navigate={navigate} />
+      ) : (
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredDoctors.map((doctor) => (
+              <EnhancedDoctorCard 
+                key={doctor._id} 
+                doctor={doctor} 
+                navigate={navigate}
+                getInitials={getInitials}
+                formatExperience={formatExperience}
+                isAdmin={isAdmin}
+                handleToggleAvailability={handleToggleAvailability}
+                handleToggleStatus={handleToggleStatus}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Enhanced Doctor Card - Matching Patient Directory Style
+const EnhancedDoctorCard = ({ doctor, navigate, getInitials, formatExperience, isAdmin, handleToggleAvailability, handleToggleStatus }) => {
+  const getAge = (dateOfBirth) => {
+    if (!dateOfBirth) return 'N/A'
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group overflow-hidden">
+      {/* Card Header with Gradient */}
+      <div className={`h-2 ${doctor.isAvailable ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-red-400 to-rose-500'}`}></div>
+      
+      <div className="p-6">
+        {/* Doctor Avatar and Basic Info */}
+        <div className="flex items-start space-x-4 mb-6">
+          <div className="relative">
+            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+              <span className="text-blue-600 font-bold text-xl">
+                {getInitials(doctor.firstName, doctor.lastName)}
+              </span>
+            </div>
+            <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
+              doctor.isAvailable ? 'bg-green-500' : 'bg-red-500'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${doctor.isAvailable ? 'bg-green-100' : 'bg-red-100'}`}></div>
+            </div>
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                Dr. {doctor.firstName} {doctor.lastName}
+              </h3>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                doctor.isActive 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {doctor.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <span className="flex items-center">
+                <Award className="h-4 w-4 mr-1 text-gray-400" />
+                {doctor.specialization || 'General Practice'}
+              </span>
+              <span className="flex items-center">
+                <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                {formatExperience(doctor.experience)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+            <Mail className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
+            <span className="truncate">{doctor.email}</span>
+          </div>
+          <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+            <Phone className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
+            <span>{doctor.phone || 'Not provided'}</span>
+          </div>
+          {doctor.address && (
+            <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+              <MapPin className="h-4 w-4 mr-3 text-gray-400 flex-shrink-0" />
+              <span className="truncate">{doctor.address.city}, {doctor.address.state}</span>
+            </div>
+          )}
+        </div>
+
+               {/* Action Buttons */}
+               <div className="flex space-x-3">
+                 <button 
+                   onClick={() => {
+                     try {
+                       console.log('Viewing doctor profile:', doctor._id)
+                       // navigate(`/doctors/${doctor._id}`) // Disabled for now
+                     } catch (error) {
+                       console.error('Error viewing doctor profile:', error)
+                     }
+                   }}
+                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
+                 >
+                   <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+                   View Profile
+                 </button>
+                 {isAdmin && (
+                   <button 
+                     onClick={() => {
+                       try {
+                         console.log('Editing doctor:', doctor._id)
+                         // navigate(`/doctors/${doctor._id}/edit`) // Disabled for now
+                       } catch (error) {
+                         console.error('Error editing doctor:', error)
+                       }
+                     }}
+                     className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
+                   >
+                     <Edit className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+                     Edit
+                   </button>
+                 )}
+               </div>
+
+        {/* Quick Stats */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>Doctor ID: {doctor._id.slice(-6)}</span>
+            <span>Fee: ${doctor.consultationFee || '0'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Enhanced Empty State
+const EmptyStateSection = ({ searchTerm, selectedSpecialization, navigate }) => {
+  return (
+    <div className="p-8">
+      <div className="text-center py-16">
+        <div className="relative mb-8">
+          <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center shadow-lg">
+            <UserCheck className="h-16 w-16 text-blue-400" />
+          </div>
+          <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+            <Search className="h-4 w-4 text-white" />
+          </div>
+        </div>
+        
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">
+          {searchTerm || selectedSpecialization ? 'No doctors found' : 'No doctors in database'}
+        </h3>
+        <p className="text-gray-500 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
+          {searchTerm || selectedSpecialization
+            ? 'We couldn\'t find any doctors matching your search criteria. Try adjusting your search terms or filters to find the doctor you\'re looking for.'
+            : 'No doctors are currently registered in the system. Contact your administrator to add doctors to the database.'
+          }
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {(searchTerm || selectedSpecialization) && (
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-8 py-4 rounded-xl font-semibold transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
+            >
+              <Search className="h-5 w-5 mr-2" />
+              Clear Search
+            </button>
+          )}
+        </div>
+        
+        {!searchTerm && !selectedSpecialization && (
+          <div className="mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-200 max-w-md mx-auto">
+            <div className="flex items-center justify-center mb-3">
+              <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                <Activity className="h-5 w-5 text-blue-600" />
+              </div>
+              <h4 className="font-semibold text-blue-900">System Information</h4>
+            </div>
+            <p className="text-blue-700 text-sm">
+              The doctor database is currently empty. Contact your system administrator 
+              to add doctors to the system and start managing healthcare professionals.
+            </p>
+          </div>
         )}
+
+        <footer className="mt-12 text-center text-gray-500 text-sm py-6 border-t border-gray-200">
+          <div className="flex items-center justify-center space-x-6 mb-2">
+            <span>© 2024 MediCare Hospital Management System</span>
+            <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+            <span>All rights reserved</span>
+            <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+            <span>v2.4.1</span>
+          </div>
+          <p className="text-gray-400">Secure • Reliable • Professional Healthcare Management</p>
+        </footer>
       </div>
     </div>
   )

@@ -33,7 +33,7 @@ const Layout = () => {
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['admin', 'staff', 'doctor', 'patient'] },
     { name: 'Patients', href: '/patients', icon: Users, roles: ['admin', 'staff'] },
     { name: 'Doctors', href: '/doctors', icon: UserCheck, roles: ['admin', 'staff', 'patient'] },
-    { name: 'Appointments', href: '/appointments', icon: Calendar, roles: ['admin', 'staff', 'doctor', 'patient'] },
+    { name: 'Appointments', href: '/appointments', icon: Calendar, roles: ['staff', 'doctor', 'patient'] },
     { name: 'Medical Records', href: '/medical-records', icon: FileText, roles: ['admin', 'staff', 'doctor'] },
     { name: 'Health Cards', href: '/health-cards', icon: CreditCard, roles: ['admin', 'staff'] },
   ]

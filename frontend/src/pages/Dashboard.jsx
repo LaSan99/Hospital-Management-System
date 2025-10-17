@@ -16,15 +16,14 @@ import {
   LineChart,
   ShieldCheck,
   Plus,
-  Phone,
   Mail,
   MapPin,
   Heart,
   Shield,
   Star,
-  ChevronRight,
   TrendingUp,
-  Eye
+  Eye,
+  ChevronRight
 } from 'lucide-react'
 import { appointmentsAPI, patientsAPI, doctorsAPI, medicalRecordsAPI, healthCardsAPI } from '../services/api'
 
@@ -192,13 +191,6 @@ const Dashboard = () => {
           <DashboardCards stats={stats} />
         </div>
 
-        <QuickActionsSection 
-          navigate={navigate} 
-          isAdmin={isAdmin} 
-          isStaff={isStaff} 
-          isDoctor={isDoctor} 
-          isPatient={isPatient} 
-        />
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
           <TodayAppointmentsSection 
@@ -278,20 +270,6 @@ const WelcomeBanner = ({ user, navigate }) => {
           </div>
           
           <div className="flex flex-wrap gap-3">
-            <button 
-              onClick={() => {
-                try {
-                  console.log('Navigating to appointments')
-                  navigate('/appointments')
-                } catch (error) {
-                  console.error('Error navigating to appointments:', error)
-                }
-              }}
-              className="bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center"
-            >
-              View All Appointments
-              <ChevronRight size={18} className="ml-2" />
-            </button>
             <button 
               onClick={() => {
                 try {
@@ -616,146 +594,5 @@ const UpcomingAppointmentsSection = ({ upcomingAppointments, getStatusColor, isP
   )
 }
 
-// Enhanced Quick Actions Section
-const QuickActionsSection = ({ navigate, isAdmin, isStaff, isDoctor, isPatient }) => {
-  const handleQuickAction = (action, route) => {
-    try {
-      // Add analytics tracking or logging here if needed
-      console.log(`Quick action clicked: ${action}`)
-      
-      // Navigate to the specified route
-      navigate(route)
-    } catch (error) {
-      console.error(`Error navigating to ${route}:`, error)
-      // You could add a toast notification here for user feedback
-    }
-  }
-
-  const handleEmergencyCall = () => {
-    try {
-      // Open phone dialer
-      window.open('tel:+1-800-HELP', '_self')
-      
-      // Log emergency call attempt
-      console.log('Emergency call initiated')
-    } catch (error) {
-      console.error('Error initiating emergency call:', error)
-    }
-  }
-
-  const quickActions = [
-    {
-      icon: <Calendar size={24} className="text-white" />,
-      title: "Book Appointment",
-      description: "Schedule with a doctor",
-      bgColor: "bg-gradient-to-br from-blue-500 to-blue-600",
-      onClick: () => handleQuickAction('Book Appointment', '/book-appointment'),
-      enabled: isPatient
-    },
-    {
-      icon: <UserCheck size={24} className="text-white" />,
-      title: "Find Doctors",
-      description: "Browse specialists",
-      bgColor: "bg-gradient-to-br from-green-500 to-green-600",
-      onClick: () => handleQuickAction('Find Doctors', '/doctors'),
-      enabled: true
-    },
-    ...((isAdmin || isStaff || isDoctor) ? [{
-      icon: <FileText size={24} className="text-white" />,
-      title: "Medical Records",
-      description: "View patient records",
-      bgColor: "bg-gradient-to-br from-purple-500 to-purple-600",
-      onClick: () => handleQuickAction('Medical Records', '/medical-records'),
-      enabled: true
-    }] : []),
-    ...(isPatient ? [{
-      icon: <CreditCard size={24} className="text-white" />,
-      title: "Health Card",
-      description: "View your health card",
-      bgColor: "bg-gradient-to-br from-orange-500 to-orange-600",
-      onClick: () => handleQuickAction('Health Card', '/health-cards'),
-      enabled: true
-    }] : []),
-    ...((isAdmin || isStaff) ? [{
-      icon: <Users size={24} className="text-white" />,
-      title: "Manage Patients",
-      description: "Patient management",
-      bgColor: "bg-gradient-to-br from-indigo-500 to-indigo-600",
-      onClick: () => handleQuickAction('Manage Patients', '/patients'),
-      enabled: true
-    }] : []),
-    {
-      icon: <Phone size={24} className="text-white" />,
-      title: "Emergency",
-      description: "Contact hospital",
-      bgColor: "bg-gradient-to-br from-red-500 to-red-600",
-      onClick: handleEmergencyCall,
-      enabled: true
-    }
-  ]
-
-  return (
-    <div className="mt-8">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Quick Actions</h2>
-        <p className="text-gray-600 text-lg">
-          Access your most important features quickly
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {quickActions.map((action, index) => (
-          <QuickActionCard key={index} {...action} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-const QuickActionCard = ({ icon, title, description, bgColor, onClick, enabled = true }) => {
-  const handleClick = () => {
-    if (enabled && onClick) {
-      onClick()
-    }
-  }
-
-  return (
-    <div 
-      onClick={handleClick}
-      className={`bg-white rounded-2xl p-6 shadow-lg transition-all duration-300 border border-gray-100 group ${
-        enabled 
-          ? 'hover:shadow-xl transform hover:-translate-y-1 cursor-pointer' 
-          : 'opacity-50 cursor-not-allowed'
-      }`}
-    >
-      <div
-        className={`${bgColor} w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg ${
-          enabled ? 'group-hover:scale-110' : ''
-        } transition-transform duration-300`}
-      >
-        {icon}
-        </div>
-      <h3 className={`font-bold mb-2 text-lg ${
-        enabled ? 'text-gray-900' : 'text-gray-500'
-      }`}>
-        {title}
-      </h3>
-      <p className={`text-sm mb-4 ${
-        enabled ? 'text-gray-600' : 'text-gray-400'
-      }`}>
-        {description}
-      </p>
-      <div className={`flex items-center font-medium text-sm transition-colors ${
-        enabled 
-          ? 'text-blue-600 group-hover:text-blue-700' 
-          : 'text-gray-400'
-      }`}>
-        <span>{enabled ? 'Access now' : 'Not available'}</span>
-        {enabled && (
-          <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />
-        )}
-      </div>
-    </div>
-  )
-}
 
 export default Dashboard
