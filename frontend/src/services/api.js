@@ -48,6 +48,7 @@ export const patientsAPI = {
   create: (patientData) => api.post('/patients', patientData),
   update: (id, patientData) => api.put(`/patients/${id}`, patientData),
   delete: (id) => api.delete(`/patients/${id}`),
+  permanentDelete: (id) => api.delete(`/patients/${id}/permanent`),
   getHealthCard: (id) => api.get(`/patients/${id}/health-card`),
 }
 
