@@ -222,7 +222,18 @@ const PatientHome = () => {
                   {slide.subtitle}
                 </p>
                 <div className="flex space-x-4">
-                  <button className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center">
+                  <button 
+                    onClick={() => {
+                      if (slide.cta === 'Book Appointment') {
+                        navigate('/book-appointment')
+                      } else if (slide.cta === 'Our Services') {
+                        navigate('/doctors')
+                      } else if (slide.cta === 'Meet Our Doctors') {
+                        navigate('/doctors')
+                      }
+                    }}
+                    className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center"
+                  >
                     {slide.cta}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </button>
@@ -569,7 +580,7 @@ const PatientHome = () => {
                           {request.status === 'rejected' && 'Your request was rejected. You can submit a new one.'}
                         </p>
                         <button 
-                          onClick={() => window.location.href = '/health-cards'}
+                          onClick={() => navigate('/health-cards')}
                           className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full"
                         >
                           {request.status === 'rejected' ? 'Request Again' : 'View Status'}
@@ -581,7 +592,7 @@ const PatientHome = () => {
                           Request your digital health card to access medical services.
                         </p>
                         <button 
-                          onClick={() => window.location.href = '/health-cards'}
+                          onClick={() => navigate('/health-cards')}
                           className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 w-full flex items-center justify-center"
                         >
                           <Plus className="h-4 w-4 mr-2" />
@@ -620,6 +631,56 @@ const PatientHome = () => {
             </div>
 
             {/* Quick Actions */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 gap-4">
+                  <button 
+                    onClick={() => navigate('/book-appointment')}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <Calendar className="h-5 w-5 mr-3" />
+                    Book New Appointment
+                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => navigate('/doctors')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Find Doctors
+                    </button>
+                    <button 
+                      onClick={() => navigate('/appointments')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      My Appointments
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => navigate('/medical-records')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Medical Records
+                    </button>
+                    <button 
+                      onClick={() => navigate('/health-cards')}
+                      className="bg-gray-50 text-gray-700 p-3 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Health Card
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
           </div>
         </div>

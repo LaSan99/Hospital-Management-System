@@ -658,7 +658,7 @@ const PatientAppointments = () => {
                   }
                 </p>
                 <button 
-                  onClick={() => window.location.href = '/doctors'}
+                  onClick={() => navigate('/doctors')}
                   className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 inline-flex items-center group"
                 >
                   <Plus className="h-6 w-6 mr-3" />

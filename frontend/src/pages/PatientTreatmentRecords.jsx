@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery } from 'react-query'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { medicalRecordsAPI } from '../services/api'
 import { 
@@ -22,6 +23,7 @@ import {
 
 const PatientTreatmentRecords = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   const { data, isLoading, error } = useQuery(
     'treatment-records',
@@ -522,7 +524,10 @@ const EmptyState = () => (
       </p>
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
         <p className="text-gray-700 mb-3 font-medium">📅 Schedule your next appointment</p>
-        <button className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105">
+        <button 
+          onClick={() => navigate('/book-appointment')}
+          className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105"
+        >
           Book Appointment
         </button>
       </div>
