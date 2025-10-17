@@ -2,6 +2,23 @@ import React, { useState } from 'react'
 import { useQuery } from 'react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { medicalRecordsAPI } from '../services/api'
+import { 
+  Calendar, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  Pill, 
+  Stethoscope, 
+  FileText,
+  ChevronDown,
+  Zap,
+  Heart,
+  Activity,
+  User,
+  Download,
+  Share2,
+  Eye
+} from 'lucide-react'
 
 const PatientTreatmentRecords = () => {
   const { user } = useAuth()
@@ -22,34 +39,88 @@ const PatientTreatmentRecords = () => {
   if (treatments.length === 0) return <EmptyState />
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-3">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Enhanced Header */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-2xl mb-6">
+            <Stethoscope className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl mb-4 bg-gradient-to-br from-blue-600 to-indigo-700 bg-clip-text text-transparent">
             My Treatment Journey
           </h1>
-          <p className="text-lg text-gray-600">
-            Track your medical treatments and progress over time
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Track your medical treatments, monitor progress, and stay informed about your health journey
           </p>
+          
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 max-w-2xl mx-auto">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Treatments</p>
+                  <p className="text-3xl font-bold text-gray-900">{treatments.length}</p>
+                </div>
+                <div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {treatments.filter(t => new Date(t.createdAt).toDateString() === new Date().toDateString()).length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {treatments.filter(t => new Date(t.createdAt) < new Date()).length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-8">
-          {treatments.map((record, index) => (
-            <TreatmentStep 
-              key={record._id} 
-              record={record} 
-              stepNumber={treatments.length - index}
-              isLast={index === treatments.length - 1}
-              isFirst={index === 0}
-            />
-          ))}
+        {/* Enhanced Treatment Timeline */}
+        <div className="relative">
+          {/* Vertical Timeline Line */}
+          <div className="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 via-purple-400 to-indigo-400 rounded-full transform -translate-x-1/2 hidden lg:block"></div>
+          
+          <div className="space-y-8 lg:space-y-12">
+            {treatments.map((record, index) => (
+              <TreatmentStep 
+                key={record._id} 
+                record={record} 
+                stepNumber={treatments.length - index}
+                isLast={index === treatments.length - 1}
+                isFirst={index === 0}
+                totalSteps={treatments.length}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-const TreatmentStep = ({ record, stepNumber, isLast, isFirst }) => {
+const TreatmentStep = ({ record, stepNumber, isLast, isFirst, totalSteps }) => {
   const [isExpanded, setIsExpanded] = useState(isFirst)
   const now = new Date()
   const recordDate = new Date(record.createdAt)
@@ -64,108 +135,140 @@ const TreatmentStep = ({ record, stepNumber, isLast, isFirst }) => {
       return {
         text: 'Upcoming',
         color: 'bg-purple-100 text-purple-800 border-purple-200',
-        icon: '⏳',
-        indicatorColor: 'bg-purple-500'
+        gradient: 'from-purple-500 to-purple-600',
+        icon: <Clock className="h-4 w-4" />,
+        indicatorColor: 'bg-purple-500',
+        bannerColor: 'purple'
       }
     }
     if (isToday) {
       return {
-        text: 'Today',
+        text: 'Active',
         color: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: '🔄',
-        indicatorColor: 'bg-blue-500'
+        gradient: 'from-blue-500 to-blue-600',
+        icon: <Zap className="h-4 w-4" />,
+        indicatorColor: 'bg-blue-500',
+        bannerColor: 'blue'
       }
     }
     return {
       text: 'Completed',
       color: 'bg-green-100 text-green-800 border-green-200',
-      icon: '✅',
-      indicatorColor: 'bg-green-500'
+      gradient: 'from-green-500 to-green-600',
+      icon: <CheckCircle className="h-4 w-4" />,
+      indicatorColor: 'bg-green-500',
+      bannerColor: 'green'
     }
   }
 
   const status = getStatusConfig()
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border transition-all duration-300 ${
-      isExpanded ? 'shadow-md ring-1 ring-gray-100' : 'hover:shadow-md'
-    } ${isPast ? 'border-green-100' : isToday ? 'border-blue-100' : 'border-purple-100'}`}>
+    <div className={`relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+      isExpanded ? 'ring-2 ring-opacity-20' : 'hover:scale-[1.02]'
+    } ${
+      isPast ? 'ring-green-500 border-green-100' : 
+      isToday ? 'ring-blue-500 border-blue-100' : 
+      'ring-purple-500 border-purple-100'
+    }`}>
       
       {/* Step Header */}
       <div 
-        className="flex items-start p-6 cursor-pointer transition-colors duration-200 hover:bg-gray-50 rounded-xl"
+        className="flex items-start p-8 cursor-pointer transition-all duration-300 hover:bg-gray-50/50 rounded-3xl"
         onClick={toggleExpand}
       >
-        {/* Step Indicator with Status */}
-        <div className="flex flex-col items-center mr-4">
-          <div className="relative">
-            <div className={`w-12 h-12 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${
-              isPast ? 'bg-gradient-to-br from-green-500 to-green-600 shadow-green-500/25' :
-              isToday ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/25' :
-              'bg-gradient-to-br from-purple-500 to-purple-600 shadow-purple-500/25'
-            }`}>
-              {isPast ? '✓' : stepNumber}
+        {/* Enhanced Step Indicator */}
+        <div className="flex flex-col items-center mr-6 relative">
+          <div className="relative group">
+            <div className={`w-16 h-16 text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-2xl bg-gradient-to-br ${status.gradient} transform group-hover:scale-110 transition-all duration-300`}>
+              {isPast ? <CheckCircle className="h-6 w-6" /> : stepNumber}
             </div>
             {/* Status dot */}
-            <div className={`absolute -top-1 -right-1 w-4 h-4 ${status.indicatorColor} border-2 border-white rounded-full`}></div>
+            <div className={`absolute -top-1 -right-1 w-5 h-5 ${status.indicatorColor} border-2 border-white rounded-full shadow-lg`}></div>
+            {/* Progress ring for future steps */}
+            {isFuture && (
+              <div className="absolute inset-0 rounded-2xl border-2 border-purple-300 animate-pulse"></div>
+            )}
           </div>
+          
+          {/* Connection line */}
           {!isLast && (
-            <div className={`w-1 h-12 mt-2 rounded-full ${
-              isPast ? 'bg-gradient-to-b from-green-400 to-green-200' :
-              'bg-gradient-to-b from-gray-400 to-gray-200'
+            <div className={`w-1 h-16 mt-4 rounded-full bg-gradient-to-b ${
+              isPast ? 'from-green-400 to-green-200' :
+              'from-gray-300 to-gray-200'
             }`}></div>
           )}
         </div>
 
         {/* Step Content */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex justify-between items-start mb-2">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-4 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+              <h3 className="text-2xl font-bold text-gray-900 bg-gradient-to-br from-gray-800 to-gray-900 bg-clip-text text-transparent">
+                Treatment Plan #{totalSteps - stepNumber + 1}
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${status.color} flex items-center space-x-2`}>
+                  {status.icon}
+                  <span>{status.text}</span>
+                </span>
+                {record.diagnosis?.mainProblem && (
+                  <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium border border-orange-200">
+                    {record.diagnosis.mainProblem}
+                  </span>
+                )}
+              </div>
+            </div>
+            
             <div className="flex items-center space-x-3">
-              <h3 className="text-xl font-semibold text-gray-900">Treatment Plan</h3>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium border ${status.color}`}>
-                <span className="mr-1">{status.icon}</span>
-                {status.text}
+              <span className="text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-full font-medium flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  {recordDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                  {isToday && ' • Today'}
+                </span>
               </span>
             </div>
-            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              {recordDate.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              })}
-              {isToday && ' • Today'}
-            </span>
           </div>
           
-          <p className="text-gray-600 mb-3">
+          <p className="text-gray-600 text-lg mb-4 leading-relaxed">
             {getTreatmentSummary(record)}
           </p>
           
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-6 text-sm text-gray-500">
               {record.treatment?.medications?.length > 0 && (
-                <span className="flex items-center">
-                  💊 {record.treatment.medications.length} medication(s)
+                <span className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-lg">
+                  <Pill className="h-4 w-4 text-blue-600" />
+                  <span>{record.treatment.medications.length} medication(s)</span>
                 </span>
               )}
               {Array.isArray(record.treatment?.procedures) && record.treatment.procedures.length > 0 && (
-                <span className="flex items-center">
-                  🔬 {record.treatment.procedures.length} procedure(s)
+                <span className="flex items-center space-x-2 bg-purple-50 px-3 py-1.5 rounded-lg">
+                  <Stethoscope className="h-4 w-4 text-purple-600" />
+                  <span>{record.treatment.procedures.length} procedure(s)</span>
                 </span>
               )}
               {isPast && (
-                <span className="flex items-center text-green-600 font-medium">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Completed
+                <span className="flex items-center space-x-2 bg-green-50 px-3 py-1.5 rounded-lg text-green-700 font-medium">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Completed</span>
                 </span>
               )}
             </div>
-            <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+            
+            <div className="flex items-center space-x-3">
+              
+              <button className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200 transform hover:scale-110">
+                <Share2 className="h-5 w-5 text-gray-500" />
+              </button>
+              <div className={`transform transition-all duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                <ChevronDown className="h-6 w-6 text-gray-400" />
+              </div>
             </div>
           </div>
         </div>
@@ -173,60 +276,49 @@ const TreatmentStep = ({ record, stepNumber, isLast, isFirst }) => {
 
       {/* Expandable Details */}
       {isExpanded && (
-        <div className="px-6 pb-6 ml-16 border-t border-gray-100 pt-6 space-y-6">
-          {/* Status Banner */}
-          {isPast && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-green-900">Treatment Completed</h4>
-                  <p className="text-green-700 text-sm">This treatment plan has been successfully completed on {recordDate.toLocaleDateString()}</p>
-                </div>
+        <div className="px-8 pb-8 ml-24 border-t border-gray-100 pt-8 space-y-8 animate-fade-in">
+          {/* Enhanced Status Banner */}
+          <div className={`rounded-2xl p-6 border-l-4 bg-gradient-to-r ${
+            status.bannerColor === 'green' ? 'from-green-50 to-emerald-50 border-green-400' :
+            status.bannerColor === 'blue' ? 'from-blue-50 to-cyan-50 border-blue-400' :
+            'from-purple-50 to-violet-50 border-purple-400'
+          }`}>
+            <div className="flex items-center">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 ${
+                status.bannerColor === 'green' ? 'bg-green-100' :
+                status.bannerColor === 'blue' ? 'bg-blue-100' :
+                'bg-purple-100'
+              }`}>
+                {status.icon}
+              </div>
+              <div>
+                <h4 className={`text-xl font-bold ${
+                  status.bannerColor === 'green' ? 'text-green-900' :
+                  status.bannerColor === 'blue' ? 'text-blue-900' :
+                  'text-purple-900'
+                }`}>
+                  {isPast ? 'Treatment Completed' : isToday ? 'Active Treatment' : 'Upcoming Treatment'}
+                </h4>
+                <p className={`mt-1 ${
+                  status.bannerColor === 'green' ? 'text-green-700' :
+                  status.bannerColor === 'blue' ? 'text-blue-700' :
+                  'text-purple-700'
+                }`}>
+                  {isPast 
+                    ? `This treatment plan was successfully completed on ${recordDate.toLocaleDateString()}`
+                    : isToday
+                    ? 'Follow this treatment plan as prescribed by your doctor'
+                    : 'This treatment plan is scheduled for the future'
+                  }
+                </p>
               </div>
             </div>
-          )}
-
-          {isToday && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-blue-900">Active Treatment</h4>
-                  <p className="text-blue-700 text-sm">Follow this treatment plan as prescribed by your doctor</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isFuture && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-purple-900">Upcoming Treatment</h4>
-                  <p className="text-purple-700 text-sm">This treatment plan is scheduled for the future</p>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Medications Section */}
           {record.treatment?.medications?.length > 0 && (
             <TreatmentSection 
-              icon="💊"
+              icon={<Pill className="h-6 w-6" />}
               title="Medications"
               type="medications"
               items={record.treatment.medications}
@@ -237,7 +329,7 @@ const TreatmentStep = ({ record, stepNumber, isLast, isFirst }) => {
           {/* Procedures Section */}
           {Array.isArray(record.treatment?.procedures) && record.treatment.procedures.length > 0 && (
             <TreatmentSection 
-              icon="🔬"
+              icon={<Stethoscope className="h-6 w-6" />}
               title="Procedures"
               type="procedures" 
               items={record.treatment.procedures}
@@ -248,7 +340,7 @@ const TreatmentStep = ({ record, stepNumber, isLast, isFirst }) => {
           {/* Recommendations Section */}
           {Array.isArray(record.treatment?.recommendations) && record.treatment.recommendations.length > 0 && (
             <TreatmentSection 
-              icon="📋"
+              icon={<FileText className="h-6 w-6" />}
               title="Recommendations"
               type="recommendations"
               items={record.treatment.recommendations}
@@ -256,34 +348,34 @@ const TreatmentStep = ({ record, stepNumber, isLast, isFirst }) => {
             />
           )}
 
-          {/* Doctor Notes */}
+          {/* Enhanced Doctor Notes */}
           {record.doctorNotes && (
-            <div className={`rounded-r-lg p-4 border-l-4 ${
-              isPast ? 'bg-green-50 border-green-400' :
-              isToday ? 'bg-blue-50 border-blue-400' :
-              'bg-purple-50 border-purple-400'
+            <div className={`rounded-2xl p-6 border-l-4 bg-gradient-to-r ${
+              isPast ? 'from-green-50 to-emerald-50 border-green-400' :
+              isToday ? 'from-blue-50 to-cyan-50 border-blue-400' :
+              'from-purple-50 to-violet-50 border-purple-400'
             }`}>
               <div className="flex items-start">
-                <span className="text-lg mr-3">👨‍⚕️</span>
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                  <User className="h-6 w-6 text-gray-600" />
+                </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Doctor's Notes</h4>
-                  <p className="text-gray-700 leading-relaxed">{record.doctorNotes}</p>
+                  <h4 className="text-xl font-bold text-gray-900 mb-3">Doctor's Notes</h4>
+                  <p className="text-gray-700 leading-relaxed text-lg">{record.doctorNotes}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Completion Status */}
+          {/* Enhanced Completion Status */}
           {isPast && (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-2 text-green-600">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span className="font-medium">Treatment successfully completed</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <div className="flex items-center space-x-3 text-green-700 mb-4 sm:mb-0">
+                <CheckCircle className="h-6 w-6" />
+                <span className="font-semibold text-lg">Treatment successfully completed</span>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                View Follow-up
+              <button className="bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700 transition-all duration-200 transform hover:scale-105 font-medium">
+                View Follow-up Details
               </button>
             </div>
           )}
@@ -298,47 +390,41 @@ const TreatmentSection = ({ icon, title, type, items, isPast }) => {
     switch (type) {
       case 'medications':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {items.map((med, i) => (
-              <div key={i} className={`rounded-lg p-4 border transition-colors duration-200 ${
+              <div key={i} className={`rounded-2xl p-6 border-2 transition-all duration-300 hover:shadow-lg ${
                 isPast 
-                  ? 'bg-green-50 border-green-200 hover:border-green-300' 
-                  : 'bg-gray-50 border-gray-200 hover:border-blue-300'
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:border-green-300' 
+                  : 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 hover:border-blue-300'
               }`}>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-semibold text-gray-900 text-lg">{med.name}</span>
-                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                <div className="flex justify-between items-start mb-4">
+                  <span className="font-bold text-gray-900 text-xl">{med.name}</span>
+                  <span className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
                     isPast 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-blue-100 text-blue-800'
+                      ? 'bg-green-100 text-green-800 border border-green-200' 
+                      : 'bg-blue-100 text-blue-800 border border-blue-200'
                   }`}>
                     {med.dosage}
                   </span>
                 </div>
-                <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {med.frequency}
+                <div className="flex items-center space-x-6 text-gray-600 mb-4">
+                  <span className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4" />
+                    <span>{med.frequency}</span>
                   </span>
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    {med.duration}
+                  <span className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>{med.duration}</span>
                   </span>
                 </div>
                 {med.instructions && (
-                  <div className="text-sm text-gray-600 border-t border-gray-200 pt-2">
-                    <strong>Instructions:</strong> {med.instructions}
+                  <div className="text-gray-600 border-t border-gray-200 pt-4">
+                    <strong className="text-gray-900">Instructions:</strong> {med.instructions}
                   </div>
                 )}
                 {isPast && (
-                  <div className="flex items-center mt-2 text-green-600 text-sm">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                  <div className="flex items-center mt-4 text-green-600 text-sm font-medium">
+                    <CheckCircle className="h-4 w-4 mr-2" />
                     Completed course
                   </div>
                 )}
@@ -350,22 +436,22 @@ const TreatmentSection = ({ icon, title, type, items, isPast }) => {
       case 'procedures':
       case 'recommendations':
         return (
-          <ul className="space-y-2">
+          <div className="space-y-4">
             {items.map((item, i) => (
-              <li key={i} className="flex items-start">
+              <div key={i} className="flex items-start p-4 rounded-xl bg-white border border-gray-200 hover:border-gray-300 transition-all duration-200">
                 {isPast ? (
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
                   </div>
                 ) : (
-                  <span className="text-blue-500 mr-3 mt-1">•</span>
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-4 mt-1 flex-shrink-0">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  </div>
                 )}
-                <span className={`${isPast ? 'text-green-800' : 'text-gray-700'}`}>{item}</span>
-              </li>
+                <span className={`text-lg ${isPast ? 'text-green-800' : 'text-gray-700'}`}>{item}</span>
+              </div>
             ))}
-          </ul>
+          </div>
         )
       
       default:
@@ -375,14 +461,20 @@ const TreatmentSection = ({ icon, title, type, items, isPast }) => {
 
   return (
     <div>
-      <div className="flex items-center mb-4">
-        <span className="text-2xl mr-3">{icon}</span>
-        <h4 className="text-lg font-semibold text-gray-900">{title}</h4>
-        {isPast && (
-          <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-            Completed
-          </span>
-        )}
+      <div className="flex items-center mb-6">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 ${
+          isPast ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+        }`}>
+          {icon}
+        </div>
+        <div>
+          <h4 className="text-2xl font-bold text-gray-900">{title}</h4>
+          {isPast && (
+            <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1 rounded-full">
+              Completed
+            </span>
+          )}
+        </div>
       </div>
       {renderItems()}
     </div>
@@ -390,28 +482,26 @@ const TreatmentSection = ({ icon, title, type, items, isPast }) => {
 }
 
 const LoadingState = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
     <div className="text-center">
-      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">Loading your treatment records</h3>
-      <p className="text-gray-500">Please wait while we fetch your medical information</p>
+      <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-3">Loading Your Treatment Journey</h3>
+      <p className="text-gray-600 text-lg">Please wait while we fetch your medical information</p>
     </div>
   </div>
 )
 
 const ErrorState = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+    <div className="text-center max-w-md mx-auto">
+      <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <AlertCircle className="h-10 w-10 text-red-600" />
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load treatment records</h3>
-      <p className="text-gray-500 mb-4">There was an error fetching your medical information</p>
+      <h3 className="text-2xl font-bold text-gray-900 mb-3">Unable to Load Records</h3>
+      <p className="text-gray-600 text-lg mb-6">There was an error fetching your treatment information</p>
       <button 
         onClick={() => window.location.reload()}
-        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+        className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
       >
         Try Again
       </button>
@@ -420,16 +510,22 @@ const ErrorState = () => (
 )
 
 const EmptyState = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-        <span className="text-3xl">💊</span>
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+    <div className="text-center max-w-md mx-auto">
+      <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+        <Heart className="h-12 w-12 text-blue-600" />
       </div>
-      <h3 className="text-2xl font-medium text-gray-900 mb-3">No treatment records found</h3>
-      <p className="text-gray-500 max-w-md mx-auto">
+      <h3 className="text-3xl font-bold text-gray-900 mb-4">No Treatment Records Yet</h3>
+      <p className="text-gray-600 text-lg mb-8 leading-relaxed">
         Your treatment plans will appear here once prescribed by your doctor. 
-        Check back after your next medical appointment.
+        Check back after your next medical appointment to track your health journey.
       </p>
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+        <p className="text-gray-700 mb-3 font-medium">📅 Schedule your next appointment</p>
+        <button className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105">
+          Book Appointment
+        </button>
+      </div>
     </div>
   </div>
 )
@@ -450,7 +546,7 @@ const getTreatmentSummary = (record) => {
     parts.push(`${record.treatment.recommendations.length} recommendation(s)`)
   }
   
-  return parts.join(' • ') || 'Treatment plan details available'
+  return parts.join(' • ') || 'Comprehensive treatment plan with detailed instructions'
 }
 
 export default PatientTreatmentRecords
