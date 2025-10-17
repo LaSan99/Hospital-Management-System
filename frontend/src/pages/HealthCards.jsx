@@ -1099,7 +1099,7 @@ const HealthCards = () => {
                       </div>
                     </div>
 
-                    {/* Patient Information Section */}
+                    {/* Patient detaile Section */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
                       <div className="flex items-center mb-4">
                         <div className="bg-blue-600 p-2 rounded-xl mr-3">
@@ -1206,7 +1206,7 @@ const HealthCards = () => {
                       </div>
                     )}
 
-                    {/* Emergency Contact Section */}
+                    {/* Emergency Contacts  */}
                     {selectedCard.emergencyContact && selectedCard.emergencyContact.name && (
                       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200">
                         <div className="flex items-center mb-4">
