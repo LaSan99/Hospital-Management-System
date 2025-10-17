@@ -605,7 +605,7 @@ const DoctorAppointments = () => {
                     {appointment.consultationFee && (
                       <div className="text-right">
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Fee</p>
-                        <p className="text-sm font-semibold text-gray-900">${appointment.consultationFee}</p>
+                        <p className="text-sm font-semibold text-gray-900">Rs. {appointment.consultationFee}</p>
                       </div>
                     )}
                   </div>
@@ -890,7 +890,7 @@ const DoctorAppointments = () => {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Consultation Fee</p>
-                    <p className="text-sm font-semibold text-gray-900">${selectedAppointment.consultationFee || 'N/A'}</p>
+                    <p className="text-sm font-semibold text-gray-900">Rs. {selectedAppointment.consultationFee || 'N/A'}</p>
                   </div>
                 </div>
               </div>
