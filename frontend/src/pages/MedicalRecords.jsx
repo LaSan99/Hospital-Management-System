@@ -20,8 +20,10 @@ import {
   Users,
   UserCheck,
   LineChart,
-  Mail
+  Mail,
+  Download
 } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { medicalRecordsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
 
@@ -72,6 +74,153 @@ const MedicalRecords = () => {
     })
   }
 
+  const generateMedicalRecordsReportPDF = () => {
+    try {
+      console.log('Starting Medical Records PDF generation...')
+      console.log('Medical Records data:', medicalRecords)
+      
+      // Check if medical records data exists
+      if (!medicalRecords || medicalRecords.length === 0) {
+        console.warn('No medical records data available')
+        alert('No medical records data available for report generation')
+        return
+      }
+      
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      let yPosition = 20
+      
+      console.log('PDF document created successfully')
+
+      // Header
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Medical Records Report', pageWidth / 2, yPosition, { align: 'center' })
+      yPosition += 10
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' })
+      yPosition += 15
+
+      // Summary
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Summary', 20, yPosition)
+      yPosition += 10
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Total Medical Records: ${medicalRecords.length}`, 20, yPosition)
+      yPosition += 6
+      doc.text(`Completed Records: ${medicalRecords.filter(r => r.status === 'completed').length}`, 20, yPosition)
+      yPosition += 6
+      doc.text(`Pending Records: ${medicalRecords.filter(r => r.status === 'pending').length}`, 20, yPosition)
+      yPosition += 6
+      doc.text(`In Progress Records: ${medicalRecords.filter(r => r.status === 'in_progress').length}`, 20, yPosition)
+      yPosition += 15
+
+      // Record Types summary
+      const recordTypes = [...new Set(medicalRecords.map(record => record.recordType).filter(Boolean))]
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Record Types', 20, yPosition)
+      yPosition += 10
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Total Record Types: ${recordTypes.length}`, 20, yPosition)
+      yPosition += 6
+      recordTypes.forEach(type => {
+        const count = medicalRecords.filter(r => r.recordType === type).length
+        doc.text(`• ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}: ${count} record${count > 1 ? 's' : ''}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 10
+
+      // Medical Records Details
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Medical Records Details', 20, yPosition)
+      yPosition += 10
+
+      medicalRecords.forEach((record, index) => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 100) {
+          doc.addPage()
+          yPosition = 20
+        }
+
+        // Record header
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${index + 1}. ${record.recordType?.charAt(0).toUpperCase() + record.recordType?.slice(1).replace('_', ' ') || 'Medical Record'}`, 20, yPosition)
+        yPosition += 8
+
+        // Record details
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        
+        const details = [
+          `Record ID: ${record._id}`,
+          `Patient: ${record.patientName || 'Unknown Patient'}`,
+          `Doctor: ${record.doctorName || 'Unknown Doctor'}`,
+          `Record Type: ${record.recordType || 'Not specified'}`,
+          `Status: ${record.status || 'Not specified'}`,
+          `Created Date: ${formatDate(record.createdAt)}`,
+        ]
+
+        if (record.diagnosis) {
+          details.push(`Diagnosis: ${record.diagnosis}`)
+        }
+        if (record.treatment) {
+          details.push(`Treatment: ${record.treatment}`)
+        }
+        if (record.medications && record.medications.length > 0) {
+          details.push(`Medications: ${record.medications.join(', ')}`)
+        }
+        if (record.notes) {
+          details.push(`Notes: ${record.notes}`)
+        }
+        if (record.vitalSigns) {
+          details.push(`Vital Signs: ${JSON.stringify(record.vitalSigns)}`)
+        }
+
+        details.forEach(detail => {
+          if (yPosition > pageHeight - 20) {
+            doc.addPage()
+            yPosition = 20
+          }
+          doc.text(detail, 25, yPosition)
+          yPosition += 5
+        })
+
+        yPosition += 10
+      })
+
+      // Footer
+      const totalPages = doc.getNumberOfPages()
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
+        doc.text('MediCare Hospital Management System', 20, pageHeight - 10)
+      }
+
+      // Download the PDF
+      console.log('Attempting to save PDF...')
+      doc.save(`medical-records-report-${new Date().toISOString().split('T')[0]}.pdf`)
+      console.log('PDF saved successfully!')
+      alert('Medical Records report PDF downloaded successfully!')
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Error generating PDF: ' + error.message)
+    }
+  }
+
   const getTypeOptions = () => {
     const types = [...new Set(medicalRecords.map(record => record.recordType))]
     return types.map(type => ({
@@ -109,7 +258,7 @@ const MedicalRecords = () => {
   }
 
   // Enhanced UI Components
-  const WelcomeBanner = ({ medicalRecords = [] }) => {
+  const WelcomeBanner = ({ medicalRecords = [], generateMedicalRecordsReportPDF }) => {
     const completedRecords = medicalRecords.filter(r => r.status === 'completed').length
     const draftRecords = medicalRecords.filter(r => r.status === 'draft').length
     const uniquePatients = new Set(medicalRecords.map(r => r.patientId?._id)).size
@@ -163,16 +312,16 @@ const MedicalRecords = () => {
               <button 
                 onClick={() => {
                   try {
-                    console.log('Navigating to medical reports')
-                    // navigate('/medical-reports') // Uncomment when route is available
+                    console.log('Generating medical records report PDF')
+                    generateMedicalRecordsReportPDF()
                   } catch (error) {
-                    console.error('Error navigating to medical reports:', error)
+                    console.error('Error generating medical records report:', error)
                   }
                 }}
                 className="bg-white/10 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 backdrop-blur-sm border border-white/20 flex items-center"
               >
-                <Activity size={18} className="mr-2" />
-                View Reports
+                <Download size={18} className="mr-2" />
+                Download Reports
               </button>
             </div>
           </div>
@@ -444,7 +593,7 @@ const MedicalRecords = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
-          <WelcomeBanner medicalRecords={medicalRecords} />
+          <WelcomeBanner medicalRecords={medicalRecords} generateMedicalRecordsReportPDF={generateMedicalRecordsReportPDF} />
           <SearchAndFiltersSection />
           <ResultsCountSection />
           <MedicalRecordsListSection />
