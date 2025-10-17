@@ -36,11 +36,17 @@ import {
 import { doctorsAPI } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
+import toast from 'react-hot-toast'
 
 const Doctors = () => {
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  
+  // Debug: Log admin status
+  console.log('User:', user)
+  console.log('Is Admin:', isAdmin)
+  console.log('User Role:', user?.role)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSpecialization, setSelectedSpecialization] = useState('')
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false)
@@ -79,8 +85,9 @@ const Doctors = () => {
   const createDoctorMutation = useMutation(
     (doctorData) => doctorsAPI.create(doctorData),
     {
-      onSuccess: () => {
+      onSuccess: (response) => {
         queryClient.invalidateQueries('doctors')
+        toast.success('Doctor account created successfully!')
         setShowAddDoctorModal(false)
         setNewDoctor({
           firstName: '',
@@ -105,6 +112,7 @@ const Doctors = () => {
       },
       onError: (error) => {
         console.error('Error creating doctor:', error)
+        toast.error(error.response?.data?.message || 'Failed to create doctor account')
       }
     }
   )
@@ -113,11 +121,13 @@ const Doctors = () => {
   const toggleAvailabilityMutation = useMutation(
     ({ doctorId, isAvailable }) => doctorsAPI.updateAvailability(doctorId, isAvailable),
     {
-      onSuccess: () => {
+      onSuccess: (response) => {
         queryClient.invalidateQueries('doctors')
+        toast.success(response.data?.message || 'Availability updated successfully')
       },
       onError: (error) => {
         console.error('Error toggling doctor availability:', error)
+        toast.error(error.response?.data?.message || 'Failed to update availability')
       }
     }
   )
@@ -128,9 +138,11 @@ const Doctors = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('doctors')
+        toast.success('Doctor status updated successfully')
       },
       onError: (error) => {
         console.error('Error toggling doctor status:', error)
+        toast.error(error.response?.data?.message || 'Failed to update doctor status')
       }
     }
   )
@@ -304,6 +316,15 @@ const Doctors = () => {
               <Filter className="h-5 w-5 mr-2 text-gray-600" />
             More Filters
           </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setShowAddDoctorModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Doctor
+            </button>
+          )}
         </div>
       </div>
 
@@ -415,6 +436,45 @@ const Doctors = () => {
                 </div>
               </div>
 
+                {/* Personal Details */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                    Personal Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date of Birth *
+                      </label>
+                      <input
+                        type="date"
+                        name="dateOfBirth"
+                        value={newDoctor.dateOfBirth}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Gender *
+                      </label>
+                      <select
+                        name="gender"
+                        value={newDoctor.gender}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                      >
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Contact Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -448,6 +508,21 @@ const Doctors = () => {
                     required
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                         placeholder="+1234567890"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={newDoctor.password}
+                    onChange={handleInputChange}
+                    required
+                    minLength="6"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                    placeholder="Minimum 6 characters"
                   />
                 </div>
                 </div>

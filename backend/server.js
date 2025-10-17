@@ -12,10 +12,11 @@ const app = express();
 app.use(helmet());
 app.use(compression());
 
-// Rate limiting
+// Rate limiting - Increased limits for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 10000, // Increased to 10000 requests per 15 minutes
+  message: 'Too many requests from this IP, please try again later.'
 });
 app.use(limiter);
 
@@ -33,7 +34,7 @@ app.options('*', cors());
 
 // Body parsing middleware
 app.use(express.json());
-app.use(express.urlencoded());
+app.use(express.urlencoded({ extended: true }));
 
 // Database connection
 const MONGODB_URI = process.env.MONGODB_URI;
