@@ -977,23 +977,23 @@ const EnhancedDoctorCard = ({ doctor, navigate, getInitials, formatExperience, i
           )}
         </div>
 
-               {/* Action Buttons */}
-               <div className="flex space-x-3">
-                 <button 
-                   onClick={() => {
-                     try {
-                       console.log('Viewing doctor profile:', doctor._id)
-                       // navigate(`/doctors/${doctor._id}`) // Disabled for now
-                     } catch (error) {
-                       console.error('Error viewing doctor profile:', error)
-                     }
-                   }}
-                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
-                 >
-                   <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-                   View Profile
-                 </button>
-                 {isAdmin && (
+               {/* Action Buttons - Hidden for Admin */}
+               {!isAdmin && (
+                 <div className="flex space-x-3">
+                   <button 
+                     onClick={() => {
+                       try {
+                         console.log('Viewing doctor profile:', doctor._id)
+                         // navigate(`/doctors/${doctor._id}`) // Disabled for now
+                       } catch (error) {
+                         console.error('Error viewing doctor profile:', error)
+                       }
+                     }}
+                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 group/btn"
+                   >
+                     <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+                     View Profile
+                   </button>
                    <button 
                      onClick={() => {
                        try {
@@ -1008,8 +1008,8 @@ const EnhancedDoctorCard = ({ doctor, navigate, getInitials, formatExperience, i
                      <Edit className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
                      Edit
                    </button>
-                 )}
-               </div>
+                 </div>
+               )}
 
         {/* Quick Stats */}
         <div className="mt-4 pt-4 border-t border-gray-100">
