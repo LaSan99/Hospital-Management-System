@@ -18,8 +18,10 @@ import {
   Edit,
   UserCheck,
   TrendingUp,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { patientsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
 
@@ -67,6 +69,112 @@ const Patients = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
   }
 
+  const generatePatientReportPDF = () => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    let yPosition = 20
+
+    // Header
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Patient Management Report', pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 10
+
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 15
+
+    // Summary
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Summary', 20, yPosition)
+    yPosition += 10
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Total Patients: ${patients.length}`, 20, yPosition)
+    yPosition += 6
+    doc.text(`Active Patients: ${patients.filter(p => p.isActive).length}`, 20, yPosition)
+    yPosition += 6
+    doc.text(`Inactive Patients: ${patients.filter(p => !p.isActive).length}`, 20, yPosition)
+    yPosition += 15
+
+    // Patient Details
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Patient Details', 20, yPosition)
+    yPosition += 10
+
+    patients.forEach((patient, index) => {
+      // Check if we need a new page
+      if (yPosition > pageHeight - 60) {
+        doc.addPage()
+        yPosition = 20
+      }
+
+      // Patient header
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${index + 1}. ${patient.firstName} ${patient.lastName}`, 20, yPosition)
+      yPosition += 8
+
+      // Patient details
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      
+      const details = [
+        `Patient ID: ${patient._id}`,
+        `Email: ${patient.email}`,
+        `Phone: ${patient.phone}`,
+        `Date of Birth: ${formatDate(patient.dateOfBirth)}`,
+        `Age: ${getAge(patient.dateOfBirth)}`,
+        `Status: ${patient.isActive ? 'Active' : 'Inactive'}`,
+        `Blood Type: ${patient.bloodType || 'Not specified'}`,
+      ]
+
+      if (patient.address) {
+        details.push(`Address: ${patient.address.street || ''}, ${patient.address.city || ''}, ${patient.address.state || ''}, ${patient.address.zipCode || ''}`)
+      }
+
+      details.forEach(detail => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage()
+          yPosition = 20
+        }
+        doc.text(detail, 25, yPosition)
+        yPosition += 5
+      })
+
+      yPosition += 10
+    })
+
+    // Footer
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth - 20, pageHeight - 10, { align: 'right' })
+      doc.text('MediCare Hospital Management System', 20, pageHeight - 10)
+    }
+
+    // Download the PDF
+    doc.save(`patient-report-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
+  const getAge = (dateOfBirth) => {
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
   if (isLoading) {
     return <LoadingSpinner />
   }
@@ -103,7 +211,7 @@ const Patients = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
       <div className="max-w-7xl mx-auto">
-        <WelcomeBanner navigate={navigate} patients={patients} />
+        <WelcomeBanner navigate={navigate} patients={patients} generatePatientReportPDF={generatePatientReportPDF} />
         
         <div className="mt-8">
           <div className="flex items-center justify-between mb-6">
@@ -148,7 +256,7 @@ const Patients = () => {
 }
 
 // Enhanced Welcome Banner
-const WelcomeBanner = ({ navigate, patients = [] }) => {
+const WelcomeBanner = ({ navigate, patients = [], generatePatientReportPDF }) => {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl shadow-xl overflow-hidden">
       <div className="flex flex-col lg:flex-row">
@@ -198,16 +306,16 @@ const WelcomeBanner = ({ navigate, patients = [] }) => {
             <button 
               onClick={() => {
                 try {
-                  console.log('Navigating to patient reports')
-                  // navigate('/patient-reports') // Uncomment when route is available
+                  console.log('Generating patient report PDF')
+                  generatePatientReportPDF()
                 } catch (error) {
-                  console.error('Error navigating to patient reports:', error)
+                  console.error('Error generating patient report:', error)
                 }
               }}
               className="bg-white/10 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 backdrop-blur-sm border border-white/20 flex items-center"
             >
-              <Activity size={18} className="mr-2" />
-              View Reports
+              <Download size={18} className="mr-2" />
+              Download Reports
         </button>
       </div>
         </div>
