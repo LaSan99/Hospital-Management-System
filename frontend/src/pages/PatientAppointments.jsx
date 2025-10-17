@@ -46,6 +46,7 @@ const PatientAppointments = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [activeView, setActiveView] = useState('list') // 'list' or 'calendar'
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [cancelConfirmId, setCancelConfirmId] = useState(null)
   const receiptRef = useRef()
 
   const { data: appointmentsData, isLoading: loadingAppointments, error: appointmentsError, refetch: refetchAppointments } = useQuery(
@@ -151,16 +152,34 @@ const PatientAppointments = () => {
     return configs[status] || configs.scheduled
   }
 
-  const handleCancelAppointment = async (appointmentId) => {
-    if (window.confirm('Are you sure you want to cancel this appointment? This action cannot be undone.')) {
-      try {
-        await appointmentsAPI.cancel(appointmentId)
+  // Cancel appointment mutation
+  const cancelAppointmentMutation = useMutation(
+    (appointmentId) => appointmentsAPI.cancel(appointmentId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('patient-appointments')
         toast.success('Appointment cancelled successfully')
-        refetchAppointments()
-      } catch (error) {
-        toast.error('Failed to cancel appointment')
+        setCancelConfirmId(null)
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to cancel appointment')
+        setCancelConfirmId(null)
       }
     }
+  )
+
+  const handleCancelAppointment = (appointmentId) => {
+    setCancelConfirmId(appointmentId)
+  }
+
+  const confirmCancel = () => {
+    if (cancelConfirmId) {
+      cancelAppointmentMutation.mutate(cancelConfirmId)
+    }
+  }
+
+  const cancelCancel = () => {
+    setCancelConfirmId(null)
   }
 
   // Delete appointment mutation
@@ -547,10 +566,10 @@ const PatientAppointments = () => {
                               {appointment.status === 'cancelled' && (
                                 <button 
                                   onClick={() => handleDeleteAppointment(appointment._id)}
-                                  className="h-10 w-10 rounded-xl border border-red-200 flex items-center justify-center text-red-400 hover:text-red-600 hover:border-red-300 transition-all duration-200"
+                                  className="group h-10 w-10 rounded-xl border-2 border-red-200 bg-red-50 flex items-center justify-center text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                                   title="Delete appointment"
                                 >
-                                  <Trash2 className="h-5 w-5" />
+                                  <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
                                 </button>
                               )}
                               <button
@@ -807,46 +826,187 @@ const PatientAppointments = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Enhanced Delete Confirmation Dialog */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
-                <Trash2 className="h-6 w-6 text-red-600" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+            {/* Header with gradient background */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl opacity-10"></div>
+              <div className="relative flex items-center justify-center mb-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+                  <Trash2 className="h-10 w-10 text-red-600" />
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Appointment</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete Appointment</h3>
+                <p className="text-gray-500 text-sm">This action cannot be undone</p>
               </div>
             </div>
             
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to permanently delete this cancelled appointment? 
-              This action cannot be undone and the appointment will be removed from your records.
-            </p>
+            {/* Warning message with icon */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <AlertCircle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-amber-800 font-medium text-sm mb-1">Warning</p>
+                  <p className="text-amber-700 text-sm leading-relaxed">
+                    Are you sure you want to permanently delete this cancelled appointment? 
+                    This action cannot be undone and the appointment will be removed from your records.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Appointment details preview */}
+            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+              <p className="text-gray-600 text-sm font-medium mb-2">Appointment Details:</p>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Stethoscope className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-gray-900 font-semibold text-sm">
+                    {allAppointments.find(apt => apt._id === deleteConfirmId)?.doctorName || 'Dr. Unknown'}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {allAppointments.find(apt => apt._id === deleteConfirmId)?.appointmentType || 'Consultation'}
+                  </p>
+                </div>
+              </div>
+            </div>
             
-            <div className="flex space-x-3">
+            {/* Action buttons */}
+            <div className="flex space-x-4">
               <button
                 onClick={cancelDelete}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-semibold text-sm flex items-center justify-center group"
               >
+                <X className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deleteAppointmentMutation.isLoading}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 transition-colors flex items-center justify-center"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl hover:from-red-600 hover:to-pink-600 disabled:from-red-300 disabled:to-pink-300 transition-all duration-200 font-semibold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
               >
                 {deleteAppointmentMutation.isLoading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                     Deleting...
                   </>
                 ) : (
-                  'Delete Appointment'
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Permanently
+                  </>
                 )}
               </button>
+            </div>
+
+            {/* Footer note */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-400">
+                This will permanently remove the appointment from your medical records
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Cancel Confirmation Dialog */}
+      {cancelConfirmId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+            {/* Header with gradient background */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl opacity-10"></div>
+              <div className="relative flex items-center justify-center mb-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+                  <AlertCircle className="h-10 w-10 text-amber-600" />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Cancel Appointment</h3>
+                <p className="text-gray-500 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            {/* Warning message with icon */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <AlertCircle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-amber-800 font-medium text-sm mb-1">Warning</p>
+                  <p className="text-amber-700 text-sm leading-relaxed">
+                    Are you sure you want to cancel this appointment? 
+                    This action cannot be undone and the appointment will be marked as cancelled.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Appointment details preview */}
+            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+              <p className="text-gray-600 text-sm font-medium mb-2">Appointment Details:</p>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Stethoscope className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-gray-900 font-semibold text-sm">
+                    {allAppointments.find(apt => apt._id === cancelConfirmId)?.doctorName || 'Dr. Unknown'}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {allAppointments.find(apt => apt._id === cancelConfirmId)?.appointmentType || 'Consultation'}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {allAppointments.find(apt => apt._id === cancelConfirmId)?.appointmentDate ? 
+                      new Date(allAppointments.find(apt => apt._id === cancelConfirmId).appointmentDate).toLocaleDateString() : 
+                      'Date not available'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex space-x-4">
+              <button
+                onClick={cancelCancel}
+                className="flex-1 px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-semibold text-sm flex items-center justify-center group"
+              >
+                <X className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                Keep Appointment
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={cancelAppointmentMutation.isLoading}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl hover:from-amber-600 hover:to-orange-600 disabled:from-amber-300 disabled:to-orange-300 transition-all duration-200 font-semibold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+              >
+                {cancelAppointmentMutation.isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Cancel Appointment
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Footer note */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-400">
+                The appointment will be marked as cancelled and removed from your schedule
+              </p>
             </div>
           </div>
         </div>

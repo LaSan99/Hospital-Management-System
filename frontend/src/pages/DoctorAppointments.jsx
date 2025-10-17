@@ -29,11 +29,13 @@ import {
   Mail,
   Trash2,
   Sparkles,
-  Edit3
+  Edit3,
+  Download
 } from 'lucide-react'
 import { appointmentsAPI, medicalRecordsAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
+import jsPDF from 'jspdf'
 
 const DoctorAppointments = () => {
   const { user } = useAuth()
@@ -111,6 +113,103 @@ const DoctorAppointments = () => {
 
   const appointments = appointmentsData?.data?.data?.appointments || 
                        appointmentsData?.data?.appointments || []
+
+  // Generate PDF report function
+  const generateAppointmentsReport = () => {
+    try {
+      const doc = new jsPDF()
+      
+      // Header
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Doctor Appointments Report', 20, 30)
+      
+      // Doctor info
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Doctor: Dr. ${user?.firstName} ${user?.lastName}`, 20, 45)
+      doc.text(`Specialization: ${user?.specialization || 'General Practice'}`, 20, 55)
+      doc.text(`Report Date: ${new Date().toLocaleDateString()}`, 20, 65)
+      
+      // Statistics
+      const totalAppointments = appointments.length
+      const completedAppointments = appointments.filter(apt => apt.status === 'completed').length
+      const cancelledAppointments = appointments.filter(apt => apt.status === 'cancelled').length
+      const upcomingAppointments = appointments.filter(apt => ['scheduled', 'confirmed'].includes(apt.status)).length
+      
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Summary Statistics', 20, 85)
+      
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Total Appointments: ${totalAppointments}`, 20, 100)
+      doc.text(`Completed: ${completedAppointments}`, 20, 110)
+      doc.text(`Cancelled: ${cancelledAppointments}`, 20, 120)
+      doc.text(`Upcoming: ${upcomingAppointments}`, 20, 130)
+      
+      // Appointments table
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Appointments List', 20, 150)
+      
+      // Table headers
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Date', 20, 165)
+      doc.text('Time', 50, 165)
+      doc.text('Patient', 80, 165)
+      doc.text('Type', 130, 165)
+      doc.text('Status', 160, 165)
+      doc.text('Fee', 190, 165)
+      
+      // Table data
+      doc.setFont('helvetica', 'normal')
+      let yPosition = 175
+      
+      appointments.slice(0, 20).forEach((appointment, index) => {
+        if (yPosition > 280) {
+          doc.addPage()
+          yPosition = 20
+        }
+        
+        const appointmentDate = new Date(appointment.appointmentDate).toLocaleDateString()
+        const timeSlot = `${appointment.startTime} - ${appointment.endTime}`
+        const patientName = appointment.patientName || 'Unknown'
+        const appointmentType = appointment.appointmentType || 'Consultation'
+        const status = appointment.status || 'Unknown'
+        const fee = appointment.consultationFee || 'N/A'
+        
+        doc.text(appointmentDate, 20, yPosition)
+        doc.text(timeSlot, 50, yPosition)
+        doc.text(patientName.length > 15 ? patientName.substring(0, 15) + '...' : patientName, 80, yPosition)
+        doc.text(appointmentType, 130, yPosition)
+        doc.text(status, 160, yPosition)
+        doc.text(`$${fee}`, 190, yPosition)
+        
+        yPosition += 8
+      })
+      
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`Page ${i} of ${pageCount}`, 20, doc.internal.pageSize.height - 10)
+        doc.text(`Generated on ${new Date().toLocaleString()}`, 120, doc.internal.pageSize.height - 10)
+      }
+      
+      // Save the PDF
+      const fileName = `Doctor_Appointments_Report_${user?.firstName}_${user?.lastName}_${new Date().toISOString().split('T')[0]}.pdf`
+      doc.save(fileName)
+      
+      toast.success('Appointments report downloaded successfully!')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate report')
+    }
+  }
 
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = 
@@ -402,9 +501,12 @@ const DoctorAppointments = () => {
                 <ChevronDown className="h-4 w-4 ml-2" />
               </button>
             </div>
-            <button className="inline-flex items-center px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-              <Plus className="h-4 w-4 mr-2" />
-              New Schedule
+            <button 
+              onClick={generateAppointmentsReport}
+              className="inline-flex items-center px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Report
             </button>
           </div>
         </div>
