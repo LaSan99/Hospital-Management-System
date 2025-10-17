@@ -931,7 +931,7 @@ const HealthCards = () => {
 
           {/* Approve Request Modal */}
           {showApproveModal && selectedRequest && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 backdrop-blur-md bg-white/10 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
                 <div className="flex justify-between items-center p-6 border-b border-gray-200">
                   <h2 className="text-xl font-semibold text-gray-900">Approve Health Card Request</h2>
@@ -1099,7 +1099,7 @@ const HealthCards = () => {
                       </div>
                     </div>
 
-                    {/* Patient Information Section */}
+                    {/* Patient detaile Section */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
                       <div className="flex items-center mb-4">
                         <div className="bg-blue-600 p-2 rounded-xl mr-3">
@@ -1206,7 +1206,7 @@ const HealthCards = () => {
                       </div>
                     )}
 
-                    {/* Emergency Contact Section */}
+                    {/* Emergency Contacts  */}
                     {selectedCard.emergencyContact && selectedCard.emergencyContact.name && (
                       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200">
                         <div className="flex items-center mb-4">
