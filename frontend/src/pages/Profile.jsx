@@ -234,7 +234,7 @@ const Profile = () => {
   )
 }
 
-// Component Functions
+//Implement Component Functions
 
 const ProfileForm = ({ register, handleSubmit, onSubmitProfile, errors, user, isLoading }) => {
   return (
